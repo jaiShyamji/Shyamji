@@ -11,9 +11,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 # ==========================================
 # 🛠️ 1. CONFIGURATION & VARIABLES (RAILWAY DASHBOARD)
 # ==========================================
-BOT_TOKEN = os.getenv("8633506244:AAGTboVt9YTkfMyCjTzrax5HkLr4yxZTlXA")
-SMM_API_URL = os.getenv("SMM_API_URL", "https://smmlite.com/api/v2")
-SMM_API_KEY = os.getenv("439b73dcf5d5f1a7cc82568944edf0df")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
+SMM_API_KEY = os.getenv("SMM_API_KEY")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
 USDT_ADDRESS = os.getenv("USDT_ADDRESS", "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
@@ -82,7 +82,6 @@ def get_or_create_user(user_id):
     return USER_DATABASE[user_id]
 
 def format_money(amount_usd, currency_pref):
-    """Automatically converts and appends proper symbols based on preference settings"""
     if currency_pref == "INR":
         return f"₹{round(amount_usd * USD_TO_INR_RATE, 2)}"
     return f"${round(amount_usd, 2)}"
@@ -162,3 +161,5 @@ async def ask_payment_method(target_message: types.Message, amount_inr: int, sta
 async def show_payment_details(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     amount_inr = data.get("deposit_amount_inr", 0)
+    amount_usd = data.get("deposit_amount_usd", 0)
+    method = callback.data.split("_")[-1].upper()
