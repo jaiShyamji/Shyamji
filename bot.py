@@ -11,9 +11,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 # ==========================================
 # 🛠️ 1. CONFIGURATION & VARIABLES (RAILWAY DASHBOARD)
 # ==========================================
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
-SMM_API_KEY = os.getenv("SMM_API_KEY")
+BOT_TOKEN = os.getenv("8633506244:AAGTboVt9YTkfMyCjTzrax5HkLr4yxZTlXA")
+SMM_API_URL = os.getenv("SMM_API_URL", "https://smmlite.com/api/v2")
+SMM_API_KEY = os.getenv("439b73dcf5d5f1a7cc82568944edf0df")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
 USDT_ADDRESS = os.getenv("USDT_ADDRESS", "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
