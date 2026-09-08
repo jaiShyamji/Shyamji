@@ -6,30 +6,33 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 # ==========================================
 # 🛠️ 1. CONFIGURATION & VARIABLES (RAILWAY DASHBOARD)
 # ==========================================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-SMM_API_URL = os.getenv("SMM_API_URL", "https://smmlite.com/api/v2")
+SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
 SMM_API_KEY = os.getenv("SMM_API_KEY")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
 USDT_ADDRESS = os.getenv("USDT_ADDRESS", "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
-# User ko $1 = ₹95 INR ke conversion markup par rate dikhane ke liye
 USD_TO_INR_RATE = 95.0 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 if not BOT_TOKEN:
     raise ValueError("ERROR: BOT_TOKEN is missing! Railway dashboard me set karein.")
 
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
 
-# Main Database - Baseline storage strictly in USD to match script integration requirements
+# ⭐ CORE FIX: MemoryStorage को जोड़ना ताकि FSM States फ्रीज न हों
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
 USER_DATABASE = {}
 
 class BotStates(StatesGroup):
@@ -38,7 +41,6 @@ class BotStates(StatesGroup):
     waiting_for_smm_link = State()    
     waiting_for_quantity = State()    
 
-# Base engine price rates strictly configured in USD ($)
 SERVICES_MASTER_DATA = {
     # --- TELEGRAM SERVICES ---
     "5153": {"name": "telegram like (👍) reaction + views [ instant]", "rate": 0.12, "type": "tg_post"},
@@ -71,19 +73,12 @@ SERVICES_MASTER_DATA = {
 def get_or_create_user(user_id):
     if user_id not in USER_DATABASE:
         USER_DATABASE[user_id] = {
-            "balance_usd": 0.0, 
-            "spent_usd": 0.0, 
-            "orders_count": 0, 
-            "channels": [], 
-            "history": [], 
-            "order_details": {},  
-            "currency": "INR" 
+            "balance_usd": 0.0, "spent_usd": 0.0, "orders_count": 0, "channels": [], "history": [], "order_details": {}, "currency": "INR"
         }
     return USER_DATABASE[user_id]
 
 def format_money(amount_usd, currency_pref):
-    if currency_pref == "INR":
-        return f"₹{round(amount_usd * USD_TO_INR_RATE, 2)}"
+    if currency_pref == "INR": return f"₹{round(amount_usd * USD_TO_INR_RATE, 2)}"
     return f"${round(amount_usd, 2)}"
 
 # ==========================================
@@ -99,11 +94,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     builder.row(types.InlineKeyboardButton(text="📦 My Orders", callback_data="main_orders"), types.InlineKeyboardButton(text="👤 My Profile", callback_data="main_profile"))
     builder.row(types.InlineKeyboardButton(text="🎁 Promotions", callback_data="main_promo"), types.InlineKeyboardButton(text="💬 Support", callback_data="main_support"))
     
-    welcome_text = (
-        "WELCOME TO HAPPY REACTION 🎉\n\n"
-        "YOUR ACCOUNT IS READY ✅\n\n"
-        "Choose an option below:👇"
-    )
+    welcome_text = "WELCOME TO HAPPY REACTION 🎉 \n\nYOUR ACCOUNT IS READY ✅\n\nChoose an option below:👇"
     await message.answer(welcome_text, reply_markup=builder.as_markup())
 
 # ==========================================
@@ -163,3 +154,4 @@ async def show_payment_details(callback: types.CallbackQuery, state: FSMContext)
     amount_inr = data.get("deposit_amount_inr", 0)
     amount_usd = data.get("deposit_amount_usd", 0)
     method = callback.data.split("_")[-1].upper()
+    builder = InlineKeyboardBuilder()
