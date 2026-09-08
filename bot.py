@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiohttp import web  # Railway port block bypass karne ke liye
 
 # ==========================================
 # 🛠️ 1. CONFIGURATION & VARIABLES (RAILWAY DASHBOARD)
@@ -28,8 +29,6 @@ if not BOT_TOKEN:
     raise ValueError("ERROR: BOT_TOKEN is missing! Railway dashboard me set karein.")
 
 bot = Bot(token=BOT_TOKEN)
-
-# ⭐ CORE FIX: MemoryStorage को जोड़ना ताकि FSM States फ्रीज न हों
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
@@ -42,7 +41,6 @@ class BotStates(StatesGroup):
     waiting_for_quantity = State()    
 
 SERVICES_MASTER_DATA = {
-    # --- TELEGRAM SERVICES ---
     "5153": {"name": "telegram like (👍) reaction + views [ instant]", "rate": 0.12, "type": "tg_post"},
     "5160": {"name": "telegram like (👍🤩🔥♥️🥰🎉) reaction + views [ instant]", "rate": 0.15, "type": "tg_post"},
     "5161": {"name": "telegram like (👎😁🥲💩🤮🤔🤯😡) reaction + views [ instant]", "rate": 0.10, "type": "tg_post"},
@@ -54,20 +52,7 @@ SERVICES_MASTER_DATA = {
     "6855": {"name": "telegram post views [1 post] [REAL AND CHEAPEST] INSTANT 30MINS", "rate": 0.09, "type": "tg_post"},
     "7153": {"name": "Telegram Members - [ Refill:- 3 Days ] [ 50k/day ] SUPER INSTANT", "rate": 0.52, "type": "tg_channel"},
     "6787": {"name": "Telegram Members - [ Mixed, Cheap ] [ 20k/day ] SUPER INSTANT", "rate": 0.38, "type": "tg_channel"},
-    "3274": {"name": "Telegram Channel Member - [ Mixed, Cheap ] [ 50k/day ] SUPER INSTANT", "rate": 0.52, "type": "tg_channel"},
-    
-    # --- INSTAGRAM SERVICES ---
-    "7802": {"name": "Instagram Likes [ Real Mixed User ] [ Speed: 20k/Hr ] [ No Refill ] INSTANT", "rate": 0.21, "type": "ig_post"},
-    "7526": {"name": "Instagram Likes [ Speed: 20k/Per Hour ] [ HQ ] INSTANT", "rate": 0.26, "type": "ig_post"},
-    "7374": {"name": "Instagram Likes [ Max - 200k ] [ Indian Mixed , Real Looking ] INSTANT", "rate": 0.19, "type": "ig_post"},
-    "3602": {"name": "Instagram Followers [ Max 300k ] [ Real Users - ww ] [ 30 Days Refill ]", "rate": 3.12, "type": "ig_profile"},
-    "1658": {"name": "Instagram Followers [ Max 200k ] [ 30 Days Refill ] INSTANT", "rate": 1.82, "type": "ig_profile"},
-    "1961": {"name": "NEW - Instagram Followers [ Max 10k ] [ 30 Days Refill ] INSTANT", "rate": 2.48, "type": "ig_profile"},
-    "8810": {"name": "NEW - Instagram Followers [ Max 10k ] [ 10-30% Drop No Refill ] INSTANT", "rate": 1.77, "type": "ig_profile"},
-    "8782": {"name": "Instagram Followers [ Real Looking ] [ NO REFILL ] Max - 500k ]", "rate": 1.97, "type": "ig_profile"},
-    "2968": {"name": "Instagram Views [ For All Link ] [ Max - Unlimited ] SUPER INSTANT", "rate": 0.40, "type": "ig_post"},
-    "6634": {"name": "Instagram Views [ Super Cheap ] SUPER INSTANT", "rate": 0.30, "type": "ig_post"},
-    "7386": {"name": "Emergency Instagram Views [ Super Cheap ] SUPER INSTANT", "rate": 0.10, "type": "ig_post"}
+    "3274": {"name": "Telegram Channel Member - [ Mixed, Cheap ] [ 50k/day ] SUPER INSTANT", "rate": 0.52, "type": "tg_channel"}
 }
 
 def get_or_create_user(user_id):
@@ -155,3 +140,22 @@ async def show_payment_details(callback: types.CallbackQuery, state: FSMContext)
     amount_usd = data.get("deposit_amount_usd", 0)
     method = callback.data.split("_")[-1].upper()
     builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="✅ मैंने पेमेंट कर दी है", callback_data=f"paid_{method}_{amount_usd}"))
+    builder.row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="main_add_funds"))
+    if method == "UPI": text = f"📲 **UPI Payment**\n\n💰 **Amount:** ₹{amount_inr}\n📌 **UPI ID:** `{UPI_ID}`\n\nPay karke screenshot aur Tran ID support par bhejein."
+    else: text = f"🪙 **USDT (TRC-20)**\n\n💰 **Amount:** ${round(amount_usd, 2)} USD (₹{amount_inr})\n📌 **Address:** `{USDT_ADDRESS}`"
+    await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+@dp.callback_query(F.data.startswith("paid_"))
+async def process_paid_click(callback: types.CallbackQuery, state: FSMContext):
+    parts = callback.data.split("_")
+    method, amount_usd = parts, float(parts)
+    user = get_or_create_user(callback.from_user.id)
+    user["history"].append({"amount_usd": amount_usd, "method": method, "status": "Pending ⏳"})
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="💬 Contact Support", url=f"https://t.me{SUPPORT_USERNAME}"))
+    builder.row(types.InlineKeyboardButton(text="⬅️ Main Menu", callback_data="back_to_menu"))
+    await callback.message.edit_text(f"✅ **Request Sent!**\n\nTeam verify karke balance add karegi. Screenshot support par bhejein.", reply_markup=builder.as_markup(), parse_mode="Markdown")
+    await state.clear()
+
+# ==========================================
