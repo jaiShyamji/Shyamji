@@ -10,8 +10,8 @@ from aiohttp import web
 # ==========================================
 # 🛠️ 1. CONFIGURATION & VARIABLES (RAILWAY DASHBOARD)
 # ==========================================
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
+BOT_TOKEN = os.getenv("BOT_TOKEN",  "8835337863:AAGpIPr3SpG-jDR8dzjSvd0fJkhLEtjCe8k")
+SMM_API_URL = os.getenv("SMM_API_URL", "https://smmlite.com/api/v2")
 SMM_API_KEY = os.getenv("SMM_API_KEY")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
