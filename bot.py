@@ -67,7 +67,8 @@ async def process_add_funds(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("amt_"))
 async def handle_amount_selection(callback: types.CallbackQuery):
-    amount_inr = int(callback.data.split("_")[-1])
+    parts = callback.data.split("_")
+    amount_inr = int(parts[-1])
     amount_usd = amount_inr / USD_TO_INR_RATE
     builder = InlineKeyboardBuilder().row(types.InlineKeyboardButton(text="✅ Done", callback_data=f"paid_{amount_usd}")).row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="main_add_funds"))
     await callback.message.edit_text(f"📲 Pay: ₹{amount_inr}\n📌 UPI: `{UPI_ID}`\n📌 USDT: `{USDT_ADDRESS}`", reply_markup=builder.as_markup())
@@ -79,7 +80,6 @@ async def process_paid_click(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data == "main_channels")
 async def process_channels(callback: types.CallbackQuery):
-    user = get_or_create_user(callback.from_user.id)
     builder = InlineKeyboardBuilder().row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="back_to_menu"))
     await callback.message.edit_text("📢 Linked Channels list active.", reply_markup=builder.as_markup())
 
@@ -117,16 +117,15 @@ async def process_service_id_command(message: types.Message):
 @dp.callback_query(F.data.startswith("buy_"))
 async def execute_order_callback(callback: types.CallbackQuery):
     parts = callback.data.split("_")
-    service_id, quantity = parts[1], int(parts[2])
+    service_id = parts[1]
+    quantity = int(parts[2])
     service_info = SERVICES_MASTER_DATA[service_id]
     user = get_or_create_user(callback.from_user.id)
     total_cost_usd = service_info["rate"] * (quantity / 1000.0)
-    
     if user["balance_usd"] < total_cost_usd:
         await callback.message.answer("❌ In-sufficient Balance!")
         await callback.answer()
         return
-        
     user["balance_usd"] -= total_cost_usd
     user["spent_usd"] += total_cost_usd
     user["orders_count"] += 1
