@@ -28,6 +28,7 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# Simple Local DB
 USER_DATABASE = {}
 
 SERVICES_MASTER_DATA = {
@@ -107,7 +108,6 @@ async def process_add_funds(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("amt_"))
 async def handle_amount_selection(callback: types.CallbackQuery):
-    # ⭐ STABILITY FIX: Fixed array mapping extraction index parameters strictly
     parts = callback.data.split("_")
     amount_inr = int(parts[-1])
     amount_usd = amount_inr / USD_TO_INR_RATE
@@ -121,7 +121,6 @@ async def handle_amount_selection(callback: types.CallbackQuery):
 
 @dp.callback_query(F.data.startswith("paid_"))
 async def process_paid_click(callback: types.CallbackQuery):
-    # ⭐ STABILITY FIX: Fixed array bounds mapping list evaluation index
     parts = callback.data.split("_")
     amount_usd = float(parts[-1])
     user = get_or_create_user(callback.from_user.id)
@@ -164,5 +163,6 @@ async def show_telegram_services_chart(callback: types.CallbackQuery):
     pref = user["currency"]
     def r(usd): return f"₹{round(usd * USD_TO_INR_RATE, 2)}" if pref == "INR" else f"${usd}"
 
-    # ⭐ ABSOLUTE CRITICAL FIX (LINE 166 LOCKED): Full alignment structural constraints brackets closed tightly
-    chart_text = (
+    # ⭐ MAXIMUM SECURITY FIX: Removed multi-line f-string brackets completely to avoid variable track crash
+    chart_text = "📊 **Select your service | Select your service ID [Current Currency: " + str(pref) + "]**\n\n"
+    chart_text += "🔥 **TELEGRAM REACTIONS SERVICE**\n"
