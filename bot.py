@@ -10,8 +10,8 @@ from aiohttp import web
 # ==========================================
 # 🛠️ 1. CONFIGURATION & VARIABLES (RAILWAY DASHBOARD)
 # ==========================================
-BOT_TOKEN = os.getenv("BOT_TOKEN",  "8835337863:AAGpIPr3SpG-jDR8dzjSvd0fJkhLEtjCe8k")
-SMM_API_URL = os.getenv("SMM_API_URL", "https://smmlite.com/api/v2")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
 SMM_API_KEY = os.getenv("SMM_API_KEY")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
@@ -25,11 +25,10 @@ logger = logging.getLogger(__name__)
 if not BOT_TOKEN:
     raise ValueError("ERROR: BOT_TOKEN is missing! Railway dashboard me set karein.")
 
-# ⭐ AIOGRAM v3 STRICT INITIALIZATION
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Simple In-Memory Database
+# Simple Database
 USER_DATABASE = {}
 
 SERVICES_MASTER_DATA = {
@@ -68,7 +67,6 @@ def get_or_create_user(user_id):
 def format_money(amount_usd, currency_pref):
     if currency_pref == "INR": return f"₹{round(amount_usd * USD_TO_INR_RATE, 2)}"
     return f"${round(amount_usd, 2)}"
-
 # ==========================================
 # 🏠 2. START COMMAND (MAIN MENU)
 # ==========================================
@@ -167,3 +165,50 @@ async def show_telegram_services_chart(callback: types.CallbackQuery):
     chart_text = "📊 **Select your service | Select your service ID [Current Currency: " + str(pref) + "]**\n\n"
     chart_text += "🔥 **TELEGRAM REACTIONS SERVICE**\n"
     chart_text += f"/5153 - telegram like (👍) - {r(0.12)} per 1000\n"
+    chart_text += f"/5160 - telegram like (👍🤩🔥♥️🥰🎉) - {r(0.15)} per 1000\n"
+    chart_text += f"/5161 - telegram like (👎😁🥲🤔🤯😡) - {r(0.10)} per 1000\n"
+    chart_text += f"/5162 - telegram like (♥️) - {r(0.15)} per 1000\n"
+    chart_text += f"/5163 - telegram like (🔥) - {r(0.15)} per 1000\n"
+    chart_text += f"/5164 - telegram like (🎉) - {r(0.15)} per 1000\n"
+    chart_text += f"/5165 - telegram like (🤩) - {r(0.15)} per 1000\n\n"
+    chart_text += "👀 **TELEGRAM POST VIEWS**\n"
+    chart_text += f"/1512 - telegram post views [Last 1 post] - {r(0.11)} per 1000\n"
+    chart_text += f"/6855 - telegram post views [1 post] - {r(0.09)} per 1000\n\n"
+    chart_text += "👥 **TELEGRAM MEMBER**\n"
+    chart_text += f"/7153 - Telegram Members [Refill 3 Days] - {r(0.52)} PER 1000\n"
+    chart_text += f"/6787 - Telegram Members [Mixed, Cheap] - {r(0.38)} PER 1000\n"
+    chart_text += f"/3274 - Telegram Channel Member - {r(0.52)} PER 1000\n\n"
+    chart_text += "ℹ️ *Tip:* Order ke liye blue link (e.g. /5160) par tap karein."
+
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="⬅️ Back to Platforms", callback_data="main_services"), types.InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_to_menu"))
+    await callback.message.edit_text(chart_text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+@dp.callback_query(F.data == "platform_instagram")
+async def show_instagram_services_chart(callback: types.CallbackQuery):
+    user = get_or_create_user(callback.from_user.id)
+    pref = user["currency"]
+    def r(usd): return f"₹{round(usd * USD_TO_INR_RATE, 2)}" if pref == "INR" else f"${usd}"
+
+    chart_text = "✨ **WELCOME TO INSTAGRAM SERVICE [Current Currency: " + str(pref) + "]** ✨\n\n"
+    chart_text += "👍 **INSTAGRAM REELS - LIKES**\n"
+    chart_text += f"/7802 - Instagram Likes [ Real Mixed ] - {r(0.21)} PER 1000\n"
+    chart_text += f"/7526 - Instagram Likes [ HQ ] - {r(0.26)} PER 1000\n"
+    chart_text += f"/7374 - Instagram Likes [ Indian Mixed ] - {r(0.19)} PER 1000\n\n"
+    chart_text += "👥 **INSTAGRAM FOLLOWERS**\n"
+    chart_text += f"/3602 - Instagram Followers [ Real Users ] - {r(3.12)} Per 1000\n"
+    chart_text += f"/1658 - Instagram Followers [ 30 Days Refill ] - {r(1.82)} Per 1000\n"
+    chart_text += f"/1961 - Instagram Followers [ Max 10k ] - {r(2.48)} Per 1000\n"
+    chart_text += f"/8810 - Instagram Followers [ Drop No Refill ] - {r(1.77)} Per 1000\n"
+    chart_text += f"/8782 - Instagram Followers [ Real Looking ] - {r(1.97)} Per 1000\n\n"
+    chart_text += "🎬 **INSTAGRAM REELS VIEW**\n"
+    chart_text += f"/2968 - Instagram Views [ Unlimited ] - {r(0.40)} Per 1000\n"
+    chart_text += f"/6634 - Instagram Views [ Super Cheap ] - {r(0.30)} Per 1000\n"
+    chart_text += f"/7386 - Emergency Instagram Views - {r(0.10)} Per 1000\n\n"
+    chart_text += "ℹ️ *Tip:* Order ke liye blue link (e.g. /7802) par tap karein."
+
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="⬅️ Back to Platforms", callback_data="main_services"), types.InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_to_menu"))
+    await callback.message.edit_text(chart_text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+@dp.callback_query(F.data.in_({"platform_facebook", "platform_youtube"}))
