@@ -25,10 +25,11 @@ logger = logging.getLogger(__name__)
 if not BOT_TOKEN:
     raise ValueError("ERROR: BOT_TOKEN is missing! Railway dashboard me set karein.")
 
+# ⭐ AIOGRAM v3 STRICT INITIALIZATION
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Simple Local DB
+# Simple In-Memory Database
 USER_DATABASE = {}
 
 SERVICES_MASTER_DATA = {
@@ -163,6 +164,6 @@ async def show_telegram_services_chart(callback: types.CallbackQuery):
     pref = user["currency"]
     def r(usd): return f"₹{round(usd * USD_TO_INR_RATE, 2)}" if pref == "INR" else f"${usd}"
 
-    # ⭐ MAXIMUM SECURITY FIX: Removed multi-line f-string brackets completely to avoid variable track crash
     chart_text = "📊 **Select your service | Select your service ID [Current Currency: " + str(pref) + "]**\n\n"
     chart_text += "🔥 **TELEGRAM REACTIONS SERVICE**\n"
+    chart_text += f"/5153 - telegram like (👍) - {r(0.12)} per 1000\n"
