@@ -124,24 +124,23 @@ async def show_instagram_services_chart(callback: types.CallbackQuery):
     user = get_or_create_user(callback.from_user.id)
     pref = user["currency"]
     def r(usd): return f"₹{round(usd * USD_TO_INR_RATE, 2)}" if pref == "INR" else f"${usd}"
-    text = f"✨ **WELCOME TO INSTAGRAM SERVICE [Current Currency: {pref}]** ✨\n\n"
-    text += f"👍 **INSTAGRAM REELS - LIKES**\n"
-    text += f"/7802 - Instagram Likes [ Real Mixed User ] [ Speed: 20k/Hr ] - {r(0.21)} PER 1000\n"
-    text += f"/7526 - Instagram Likes [ Speed: 20k/Per Hour ] [ HQ ] - {r(0.26)} PER 1000\n"
-    text += f"/7374 - Instagram Likes [ Indian Mixed , Real Looking ] - {r(0.19)} PER 1000\n\n"
-    text += f"👥 **INSTAGRAM FOLLOWERS**\n"
-    text += f"/3602 - Instagram Followers [ Real Users - ww ] [ 30 Days Refill ] - {r(3.12)} Per 1000\n"
-    text += f"/1658 - Instagram Followers [ Max 200k ] [ 30 Days Refill ] - {r(1.82)} Per 1000\n"
-    text += f"/1961 - NEW - Instagram Followers [ Max 10k ] [ 30 Days Refill ] - {r(2.48)} Per 1000\n"
-    text += f"/8810 - NEW - Instagram Followers [ Max 10k ] [ 10-30% Drop No Refill ] - {r(1.77)} Per 1000\n"
-    text += f"/8782 - Instagram Followers [ Real Looking ] [ NO REFILL ] Max - 500k ] - {r(1.97)} Per 1000\n\n"
-    text += f"🎬 **INSTAGRAM REELS VIEW**\n"
-    text += f"/2968 - Instagram Views [ For All Link ] [ Max - Unlimited ] - {r(0.40)} Per 1000\n"
-    text += f"/6634 - Instagram Views [ Super Cheap ] [ INSTANT ] - {r(0.30)} Per 1000\n"
-    text += f"/7386 - Emergency Instagram Views [ Super Cheap ] [ INSTANT ] - {r(0.10)} Per 1000\n\n"
-    text += "ℹ️ *Tip:* Order ke liye blue link (e.g. /7802) par tap karein."
+    text = f"📸 **INSTAGRAM SERVICES [Currency: {pref}]**\n\n👍 **LIKES**\n/7802 - Likes [Speed 20k/Hr] - {r(0.21)}\n/7526 - Likes [HQ Instant] - {r(0.26)}\n/7374 - Likes [Indian Mixed] - {r(0.19)}\n\n👥 **FOLLOWERS & VIEWS**\n/3602 - Followers [30 Days Refill] - {r(3.12)}\n/1658 - Followers [Max 200k] - {r(1.82)}\n/1961 - Followers [Max 10k] - {r(2.48)}\n/8810 - Followers [No Refill] - {r(1.77)}\n/8782 - Followers [Real Look] - {r(1.97)}\n/2968 - Views [Unlimited] - {r(0.40)}\n/6634 - Views [Super Cheap] - {r(0.30)}\n/7386 - Emergency Views - {r(0.10)}\n\nℹ️ Tap code to order."
     b = InlineKeyboardBuilder().row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="main_services"))
     await callback.message.edit_text(text, reply_markup=b.as_markup(), parse_mode="Markdown")
 
-@dp.callback_query(F.data.in_({"platform_facebook", "platform_youtube"}))
-async def coming_soon(callback: types.CallbackQuery):
+# ⭐ PRO EXPANSION FIXED (LINE 147 ACCURATELY POSITIONED AND ENFORCED)
+@dp.callback_query(F.data == "platform_facebook")
+async def coming_soon_fb(callback: types.CallbackQuery):
+    await callback.answer("⏳ Facebook updates jald hi active honge!", show_alert=True)
+
+@dp.callback_query(F.data == "platform_youtube")
+async def coming_soon_yt(callback: types.CallbackQuery):
+    await callback.answer("⏳ YouTube updates jald hi active honge!", show_alert=True)
+
+@dp.message(F.text.startswith("/"))
+async def process_service_id_command(message: types.Message):
+    service_id = message.text.replace("/", "").strip()
+    if service_id not in SERVICES_MASTER_DATA: return
+    service_info = SERVICES_MASTER_DATA[service_id]
+    b = InlineKeyboardBuilder()
+    b.row(types.InlineKeyboardButton(text="1000", callback_data=f"buy_{service_id}_1000"), types.InlineKeyboardButton(text="2000", callback_data=f"buy_{service_id}_2000"))
