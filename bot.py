@@ -1,12 +1,16 @@
 import os
 import logging
 import asyncio
+import requests
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiohttp import web
 from services import SERVICES_MASTER_DATA
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
+SMM_API_KEY = os.getenv("SMM_API_KEY")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
 USDT_ADDRESS = os.getenv("USDT_ADDRESS", "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
@@ -54,7 +58,7 @@ async def process_add_funds(callback: types.CallbackQuery):
     b.row(types.InlineKeyboardButton(text="₹500", callback_data="amt_500"), types.InlineKeyboardButton(text="₹1000", callback_data="amt_1000"))
     b.row(types.InlineKeyboardButton(text="₹2000", callback_data="amt_2000"), types.InlineKeyboardButton(text="₹5000", callback_data="amt_5000"))
     b.row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="back_to_menu"))
-    await callback.message.edit_text("💳 **Add Funds / डिपॉजिट फंड:**\n\nकोई एक अमाउंट चुनें:", reply_markup=b.as_markup(), parse_mode="Markdown")
+    await callback.message.edit_text("💳 **Add Funds / डिपॉजिट Fund:**\n\nकोई एक अमाउंट चुनें:", reply_markup=b.as_markup(), parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("amt_"))
 async def handle_amount_selection(callback: types.CallbackQuery):
@@ -124,9 +128,13 @@ async def show_instagram_services_chart(callback: types.CallbackQuery):
     b = InlineKeyboardBuilder().row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="main_services"))
     await callback.message.edit_text(text, reply_markup=b.as_markup(), parse_mode="Markdown")
 
-@dp.callback_query(F.data.in_({"platform_facebook", "platform_youtube"}))
-async def coming_soon(callback: types.CallbackQuery):
-    await callback.answer("⏳ Updates soon!", show_alert=True)
+@dp.callback_query(F.data == "platform_facebook")
+async def coming_soon_fb(callback: types.CallbackQuery):
+    await callback.answer("⏳ Facebook updates soon!", show_alert=True)
+
+@dp.callback_query(F.data == "platform_youtube")
+async def coming_soon_yt(callback: types.CallbackQuery):
+    await callback.answer("⏳ YouTube updates soon!", show_alert=True)
 
 @dp.message(F.text.startswith("/"))
 async def process_service_id_command(message: types.Message):
@@ -136,7 +144,3 @@ async def process_service_id_command(message: types.Message):
     b = InlineKeyboardBuilder()
     b.row(types.InlineKeyboardButton(text="1000", callback_data=f"buy_{service_id}_1000"), types.InlineKeyboardButton(text="2000", callback_data=f"buy_{service_id}_2000"))
     b.row(types.InlineKeyboardButton(text="5000", callback_data=f"buy_{service_id}_5000"), types.InlineKeyboardButton(text="10000", callback_data=f"buy_{service_id}_10000"))
-    b.row(types.InlineKeyboardButton(text="⬅️ BACK", callback_data="main_services"))
-    await message.answer(f"🔢 **You select your quantity:**\n\nService: {service_info['name']}\nRate: ${service_info['rate']} per 1000\n\nNeeche buttons me se quantity chunein:", reply_markup=b.as_markup())
-
-@dp.callback_query(F.data.startswith("buy_"))
