@@ -151,3 +151,80 @@ async def execute_order_callback(callback: types.CallbackQuery):
         await callback.answer()
         return
         
+    try:
+        res = requests.post(SMM_API_URL, data={'key': SMM_API_KEY, 'action': 'add', 'service': service_id, 'link': 'https://t.me', 'quantity': quantity}, timeout=10).json()
+        if "order" in res:
+            smm_order_id = str(res["order"])
+            user["balance_usd"] -= total_cost_usd
+            user["spent_usd"] += total_cost_usd
+            user["orders_count"] += 1
+            user["order_details"][smm_order_id] = {"cost_usd": total_cost_usd, "service": service_info["name"], "quantity": quantity, "status": "Pending ⏳", "refunded": False}
+            success_text = f"🎉 **Order Placed Successfully!**\n\n🆔 **Order ID:** `{smm_order_id}`\n🛠️ **Service:** {service_info['name']}\n🔢 **Quantity:** {quantity}\n💰 **Deducted Amount:** {format_money(total_cost_usd, user['currency'])}"
+        else: success_text = f"❌ Order rejected: `{res.get('error', 'Unknown Error')}`"
+    except Exception: success_text = "❌ Network connection issue. Kripya baad me try karein."
+    await callback.message.answer(success_text)
+    await callback.answer()
+
+@dp.callback_query(F.data == "main_orders")
+async def process_orders(callback: types.CallbackQuery):
+    user = get_or_create_user(callback.from_user.id)
+    builder = InlineKeyboardBuilder().row(types.InlineKeyboardButton(text="🔄 Refresh Orders Status", callback_data="refresh_orders")).row(types.InlineKeyboardButton(text="⬅️ Menu", callback_data="back_to_menu"))
+    if not user["order_details"]:
+        await callback.message.edit_text("📦 **Your Orders History:**\n\n❌ Koi order history nahi mili.", reply_markup=builder.as_markup())
+        return
+    text = "📦 **Your Live Orders Status:**\n\n"
+    for order_id, meta in list(user["order_details"].items())[-5:]:
+        text += f"🆔 **Order:** `{order_id}`\n📊 **Status:** {meta['status']}\n💰 **Cost:** {format_money(meta['cost_usd'], user['currency'])}\n━━━━━━━━━━━━━━━━━━━━\n"
+    await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+@dp.callback_query(F.data == "refresh_orders")
+async def refresh_orders_handler(callback: types.CallbackQuery): await process_orders(callback)
+
+@dp.callback_query(F.data == "main_profile")
+async def process_profile(callback: types.CallbackQuery):
+    user = get_or_create_user(callback.from_user.id)
+    text = f"👤 **USER PROFILE**\n━━━━━━━━━━━━\n📛 Name: {callback.from_user.full_name}\n🔑 ID: `{callback.from_user.id}`\n🌐 Currency Preference: **{user['currency']}**\n━━━━━━━━━━━━\n💰 Balance: {format_money(user['balance_usd'], user['currency'])}\n💸 Total Spend: {format_money(user['spent_usd'], user['currency'])}\n📦 Total Orders: {user['orders_count']}\n\n👉 **Change Currency:** Display badalne ke liye button chunein:"
+    builder = InlineKeyboardBuilder().row(types.InlineKeyboardButton(text="🇮🇳 Switch to INR (₹)", callback_data="set_curr_INR"), types.InlineKeyboardButton(text="🇺🇸 Switch to USD ($)", callback_data="set_curr_USD")).row(types.InlineKeyboardButton(text="⬅️ Menu", callback_data="back_to_menu"))
+    await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+@dp.callback_query(F.data.startswith("set_curr_"))
+async def handle_currency_switch(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    user = get_or_create_user(callback.from_user.id)
+    user["currency"] = str(parts[-1])
+    await callback.answer("✅ Currency Preferred Updated!", show_alert=True)
+    await process_profile(callback)
+
+@dp.callback_query(F.data == "main_promo")
+async def process_promo(callback: types.CallbackQuery):
+    builder = InlineKeyboardBuilder().add(types.InlineKeyboardButton(text="⬅️ Menu", callback_data="back_to_menu"))
+    await callback.message.edit_text("🎁 **Promotions:** Vartaman me koi promo code active nahi hai.", reply_markup=builder.as_markup())
+
+@dp.callback_query(F.data == "main_support")
+async def process_support(callback: types.CallbackQuery):
+    builder = InlineKeyboardBuilder().row(types.InlineKeyboardButton(text="👨‍💻 Contact Admin", url=f"https://t.me{SUPPORT_USERNAME}")).row(types.InlineKeyboardButton(text="⬅️ Menu", callback_data="back_to_menu"))
+    await callback.message.edit_text("💬 **Support:** Kisi bhi sahayata ke liye admin se sampark karein.", reply_markup=builder.as_markup())
+
+@dp.callback_query(F.data == "back_to_menu")
+async def back_to_menu_handler(callback: types.CallbackQuery):
+    builder = InlineKeyboardBuilder()
+    builder.row(types.InlineKeyboardButton(text="💰 Balance", callback_data="main_balance"), types.InlineKeyboardButton(text="➕ Add Funds", callback_data="main_add_funds"))
+    builder.row(types.InlineKeyboardButton(text="📢 My Channels", callback_data="main_channels"), types.InlineKeyboardButton(text="🛠️ Services", callback_data="main_services"))
+    builder.row(types.InlineKeyboardButton(text="📦 My Orders", callback_data="main_orders"), types.InlineKeyboardButton(text="👤 My Profile", callback_data="main_profile"))
+    builder.row(types.InlineKeyboardButton(text="🎁 Promotions", callback_data="main_promo"), types.InlineKeyboardButton(text="💬 Support", callback_data="main_support"))
+    await callback.message.edit_text("WELCOME TO HAPPY REACTION 🎉\n\nYOUR ACCOUNT IS READY ✅\n\nChoose an option below:👇", reply_markup=builder.as_markup())
+
+async def web_handle(request): return web.Response(text="Online")
+
+async def main():
+    await bot.delete_webhook(drop_pending_updates=True)
+    app = web.Application()
+    app.router.add_get('/', web_handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, '0.0.0.0', int(os.getenv("PORT", 8080))).start()
+    await dp.start_polling(bot, allowed_updates=None)
+
+if __name__ == "__main__":
+    try: asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit): pass
