@@ -1,16 +1,12 @@
 import os
 import logging
 import asyncio
-import requests
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiohttp import web
 from services import SERVICES_MASTER_DATA
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
-SMM_API_KEY = os.getenv("SMM_API_KEY")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
 USDT_ADDRESS = os.getenv("USDT_ADDRESS", "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
@@ -141,3 +137,6 @@ async def process_service_id_command(message: types.Message):
     b.row(types.InlineKeyboardButton(text="1000", callback_data=f"buy_{service_id}_1000"), types.InlineKeyboardButton(text="2000", callback_data=f"buy_{service_id}_2000"))
     b.row(types.InlineKeyboardButton(text="5000", callback_data=f"buy_{service_id}_5000"), types.InlineKeyboardButton(text="10000", callback_data=f"buy_{service_id}_10000"))
     b.row(types.InlineKeyboardButton(text="⬅️ BACK", callback_data="main_services"))
+    await message.answer(f"🔢 **You select your quantity:**\n\nService: {service_info['name']}\nRate: ${service_info['rate']} per 1000\n\nNeeche buttons me se quantity chunein:", reply_markup=b.as_markup())
+
+@dp.callback_query(F.data.startswith("buy_"))
