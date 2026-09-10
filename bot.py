@@ -24,7 +24,7 @@ USD_TO_INR_RATE = 95.0
 
 # ---------- LOGGING ----------
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(name)
+logger = logging.getLogger("name")
 
 if not BOT_TOKEN:
     raise ValueError("ERROR: BOT_TOKEN is missing!")
