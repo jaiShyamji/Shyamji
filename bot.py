@@ -139,19 +139,40 @@ async def back_to_menu(callback: types.CallbackQuery):
     await callback.message.edit_text("🏠 Main Menu\n\nChoose an option below:👇", reply_markup=b.as_markup())
 
 
-async def main():
-    await dp.start_polling(bot)
-
-
-if name == "main":
-    asyncio.run(main())
-    @dp.callback_query(F.data == "platform_instagram")
+@dp.callback_query(F.data == "platform_instagram")
 async def show_instagram_services_chart(callback: types.CallbackQuery):
     user = get_or_create_user(callback.from_user.id)
     pref = user["currency"]
 
     def r(usd):
         return f"₹{round(usd * USD_TO_INR_RATE, 2)}" if pref == "INR" else f"${usd}"
+
+    text = (
+        f"📸 INSTAGRAM SERVICES [Currency: {pref}]\n\n"
+        f"👍 LIKES\n"
+        f"/7802 - Likes [Speed 20k/Hr] - {r(0.21)}\n"
+        f"/7526 - Likes [HQ Instant] - {r(0.26)}\n"
+        f"/7374 - Likes [Indian Mixed] - {r(0.19)}\n\n"
+        f"👥 FOLLOWERS & VIEWS\n"
+        f"/3602 - Followers [30 Days Refill] - {r(3.12)}\n"
+        f"/1658 - Followers [Max 200k] - {r(1.82)}\n"
+        f"/1961 - Followers [Max 10k] - {r(2.48)}\n"
+        f"/8810 - Followers [No Refill] - {r(1.77)}\n"
+        f"/8782 - Followers [Real Look] - {r(1.97)}\n"
+        f"/2968 - Views [Unlimited] - {r(0.40)}\n"
+        f"/6634 - Views [Super Cheap] - {r(0.30)}\n"
+        f"/7386 - Emergency Views - {r(0.10)}\n\n"
+        f"ℹ️ Order karne ke liye code *type* karein (e.g. /7802)"
+    )
+
+    b = InlineKeyboardBuilder()
+    b.row(types.InlineKeyboardButton(text="⬅️ Back", callback_data="main_services"))
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=b.as_markup(),
+        parse_mode="Markdown"
+    )
 
     text = f"📊 Select your service ID [Current Currency: {pref}]\n\n"
     text += "📸 INSTAGRAM SERVICES\n\n"
