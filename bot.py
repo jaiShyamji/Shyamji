@@ -8,8 +8,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiohttp import web
 from services import SERVICES_MASTER_DATA
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-SMM_API_URL = os.getenv("SMM_API_URL", "https://your-smm-panel.com")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8633506244:AAH3dhIoo7KplAgkQXQACNuGr8l11pmgiJ0")
+SMM_API_URL = os.getenv("SMM_API_URL", "https://smmlite.com/api/v2")
 SMM_API_KEY = os.getenv("SMM_API_KEY")
 SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "YourSupportUsername")
 UPI_ID = os.getenv("UPI_ID", "your-vpa@ybl")
