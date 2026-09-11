@@ -7,8 +7,8 @@ function getOrCreateUser(id, username = "User") {
     if (!USER_DATABASE[id]) {
         USER_DATABASE[id] = { 
             username: username || "User",
-            balance_usd: 10.0, 
-            total_deposit_usd: 10.0, 
+            balance_usd: 0.0, // Starting balance bilkul 0 kar diya bhai
+            total_deposit_usd: 0.0, // Starting deposit bhi 0 rahega
             spent_usd: 0.0, 
             orders_count: 0, 
             cancelled_orders: 0,
