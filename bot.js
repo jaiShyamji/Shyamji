@@ -1,6 +1,6 @@
 require('dotenv').config();
-const { Bot, InlineKeyboard } = require('grammy');
-const { run } = require('@grammyjs/runner');
+const { Bot, InlineKeyboard, webhookCallback } = require('grammy');
+const http = require('http');
 const config = require('./config');
 const m = require('./menuHandlers');
 const o = require('./orderHandlers');
@@ -8,6 +8,7 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
+// Saare commands aur callbacks mapping bhai
 bot.command("start", m.start);
 bot.callbackQuery("back_to_menu", m.backMenu);
 bot.callbackQuery("check_balance", m.checkBalance);
@@ -31,7 +32,7 @@ bot.callbackQuery("main_orders", o.ordersHistory);
 
 bot.command("admin", async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
-    await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai tumhara access confirm hai. Jab koi user payment reference number bhejega, yahan direct alerts aayenge.`, { parse_mode: "Markdown" });
+    await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai access confirm hai. Alert panel ready hai.`, { parse_mode: "Markdown" });
 });
 
 bot.callbackQuery(/^admin_(approve|reject)_(.+)_(.+)$/, async (ctx) => {
@@ -43,7 +44,7 @@ bot.callbackQuery(/^admin_(approve|reject)_(.+)_(.+)$/, async (ctx) => {
 
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) {
-        await ctx.answerCallbackQuery({ text: "❌ Request expired or already verified!", show_alert: true });
+        await ctx.answerCallbackQuery({ text: "❌ Request already processed!", show_alert: true });
         return;
     }
 
@@ -51,11 +52,10 @@ bot.callbackQuery(/^admin_(approve|reject)_(.+)_(.+)$/, async (ctx) => {
     if (action === "approve") {
         u.balance_usd += depositData.amount_usd;
         u.total_deposit_usd += depositData.amount_usd;
-        
-        await bot.api.sendMessage(userId, `✅ *Payment Approved!* 💰\n\nBhai tumhara deposit verify ho gaya hai.\n✨ *Added:* ${m.formatMoney(depositData.amount_usd, u.currency)}\n💳 *New Balance:* ${m.formatMoney(u.balance_usd, u.currency)}`, { parse_mode: "Markdown" });
+        await bot.api.sendMessage(userId, `✅ *Payment Approved!* 💰\n\n✨ *Added:* ${m.formatMoney(depositData.amount_usd, u.currency)}\n💳 *New Balance:* ${m.formatMoney(u.balance_usd, u.currency)}`, { parse_mode: "Markdown" });
         await ctx.editMessageText(`✅ Approved for User ${userId}`);
     } else {
-        await bot.api.sendMessage(userId, `❌ *Payment Rejected!*\n\nBhai tumhara Ref/UTR verify nahi ho paaya. Please support panel par screenshot send karo.`);
+        await bot.api.sendMessage(userId, `❌ *Payment Rejected!*\n\nBhai tumhara Ref/UTR verify nahi ho paaya.`);
         await ctx.editMessageText(`❌ Rejected Request for User ${userId}`);
     }
     delete m.PENDING_DEPOSITS[refKey];
@@ -64,7 +64,7 @@ bot.callbackQuery(/^admin_(approve|reject)_(.+)_(.+)$/, async (ctx) => {
 bot.callbackQuery(/^submit_utr_(.+)$/, async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id);
     u.awaiting_utr = true;
-    await ctx.reply("📝 *Bhai, ab apna 12-digit UTR / Reference number yahan message box mein type karke send karo:*", { parse_mode: "Markdown" });
+    await ctx.reply("📝 *Bhai, apna 12-digit UTR/Reference number yahan send karo:*", { parse_mode: "Markdown" });
 });
 
 bot.on("message:text", async (ctx) => {
@@ -83,21 +83,18 @@ bot.on("message:text", async (ctx) => {
             .text("❌ REJECT", `admin_reject_${ctx.from.id}_${refKey}`);
 
         await bot.api.sendMessage(config.ADMIN_ID, 
-            `🔔 *NEW PAYMENT SUBMISSION!* 🔔\n\n` +
-            `👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n` +
-            `💰 *Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n` +
-            `📝 *UTR/Hash:* \`${txt}\`\n\nBhai verify karke action chuno:`, 
+            `🔔 *NEW PAYMENT SUBMISSION!* 🔔\n\n👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n💰 *Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n📝 *UTR:* \`${txt}\``, 
             { reply_markup: adminKb, parse_mode: "Markdown" }
         );
 
-        await ctx.reply(`💌 *Request Submitted!* ✅\n\nTumhara Reference number \`${txt}\` verification ke liye admin ke paas bhej diya gaya hai. Kuch hi der mein balance add ho jayega!`);
+        await ctx.reply(`💌 *Request Submitted!* ✅\n\nRef \`${txt}\` verify hote hi balance add ho jayega bhai!`);
         return;
     }
 
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) {
-            await ctx.reply("❌ Invalid amount! Please try again:");
+            await ctx.reply("❌ Invalid amount! Try again:");
             return;
         }
         
@@ -108,20 +105,10 @@ bot.on("message:text", async (ctx) => {
         if (u.chosen_pay_method === "pay_via_upi") {
             const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`;
             const qrUrl = `https://googleapis.com{encodeURIComponent(upiRaw)}`;
-            
-            await ctx.replyWithPhoto(qrUrl, {
-                caption: `🟢 *UPI AUTOMATIC QR CODE*\n\n💵 *Amount:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 *Step 1:* Is QR code ko scan karke pay karein.\n👉 *Step 2:* Payment ke baad neeche "SUBMIT UTR / REF" button daba kar apna Reference number bhejein.`,
-                reply_markup: kb,
-                parse_mode: "Markdown"
-            });
+            await ctx.replyWithPhoto(qrUrl, { caption: `🟢 *UPI AUTOMATIC QR CODE*\n\n💵 *Amount:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\nscan karke payment karein aur neeche UTR submit karein bhai.`, reply_markup: kb, parse_mode: "Markdown" });
         } else {
             const qrUrl = `https://googleapis.com{encodeURIComponent(config.USDT_ADDRESS)}`;
-            
-            await ctx.replyWithPhoto(qrUrl, {
-                caption: `🪙 *USDT (TRC20) QR CODE*\n\n💵 *Amount:* $${amt.toFixed(2)}\n📍 *Address:* \`${config.USDT_ADDRESS}\`\n\n👉 *Step 1:* Is address par USDT send karein.\n👉 *Step 2:* Payment ke baad neeche "SUBMIT UTR / REF" button daba kar transaction hash number bhejein.`,
-                reply_markup: kb,
-                parse_mode: "Markdown"
-            });
+            await ctx.replyWithPhoto(qrUrl, { caption: `🪙 *USDT QR CODE*\n\n💵 *Amount:* $${amt.toFixed(2)}\n📍 *Address:* \`${config.USDT_ADDRESS}\``, reply_markup: kb, parse_mode: "Markdown" });
         }
         return;
     }
@@ -129,15 +116,20 @@ bot.on("message:text", async (ctx) => {
     await o.handleTextMessages(ctx);
 });
 
-async function startBotEngine() {
-    try {
-        console.log("Forcing old sessions to clear...");
-        await bot.api.deleteWebhook({ drop_pending_updates: true });
-        run(bot); 
-        console.log("HAPPY REACTION Perfect Combined Engine Active Now!");
-    } catch (err) {
-        console.error("Runner Initialization Error:", err);
-    }
+// 🌐 WEBHOOK HTTP SERVER SYSTEM FOR RAILWAY
+const server = http.createServer(webhookCallback(bot, 'http'));
+
+async function initServer() {
+    server.listen(config.PORT, async () => {
+        console.log(`Server listening on port ${config.PORT}`);
+        if (config.RAILWAY_URL) {
+            const hookUrl = `${config.RAILWAY_URL}/`;
+            await bot.api.setWebhook(hookUrl, { drop_pending_updates: true });
+            console.log(`Webhook successfully set to: ${hookUrl}`);
+        } else {
+            console.log("Waiting for domain binding...");
+        }
+    });
 }
 
-startBotEngine();
+initServer();
