@@ -1,6 +1,6 @@
 const { InlineKeyboard } = require('grammy');
 const axios = require('axios');
-const config = require('./config'); // Missing import fix kar diya bhai
+const config = require('./config');
 const SERVICES_MASTER_DATA = require('./services');
 const m = require('./menuHandlers');
 
@@ -39,7 +39,6 @@ async function proceedToLinkRequest(ctx, u, serviceId, qty) {
     const txt = `📋 *Order Summary*\n\n🛠️ Service: \`${sInfo.name}\`\n📊 Quantity: \`${qty}\`\n💸 Cost: ${m.formatMoney(u.pending_cost_usd, u.currency)}\n\n💬 ${h}`;
     if (ctx.callbackQuery) { await ctx.editMessageText(txt, { parse_mode: "Markdown" }); } else { await ctx.reply(txt, { parse_mode: "Markdown" }); }
 }
-
 module.exports = {
     servicesMenu: async (ctx) => { await ctx.editMessageText(`🛠️ *Select Platform / प्लेटफार्म चुनें:*`, { reply_markup: getPlatformsKeyboard(), parse_mode: "Markdown" }); },
     ordersHistory: async (ctx) => {
@@ -70,7 +69,7 @@ module.exports = {
         await ctx.reply(`👉 *You selected:* ${SERVICES_MASTER_DATA[id].name}\n\n🔢 *Select Your Quantity:*`, { reply_markup: getQuantityKeyboard(id), parse_mode: "Markdown" });
     },
     handleQtyButtons: async (ctx) => {
-        const parts = ctx.callbackQuery.data.split("_"), serviceId = parts, qtyType = parts, u = m.getOrCreateUser(ctx.from.id);
+        const parts = ctx.callbackQuery.data.split("_"), serviceId = parts[1], qtyType = parts[2], u = m.getOrCreateUser(ctx.from.id);
         if (qtyType === "custom") { u.awaiting_custom_qty = true; await ctx.editMessageText("🔢 Please type your custom quantity amount:"); return; }
         await proceedToLinkRequest(ctx, u, serviceId, parseInt(qtyType));
     },
@@ -85,13 +84,11 @@ module.exports = {
                 const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${config.MERCHANT_NAME}&am=${amt.toFixed(2)}&cu=INR`;
                 const qrUrl = `https://googleapis.com{encodeURIComponent(upiRaw)}`;
                 await ctx.replyWithPhoto(qrUrl, { caption: `🟢 *UPI Automatic QR Code*\n\n💵 *Amount:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\``, reply_markup: kb, parse_mode: "Markdown" });
-                u.total_deposit_usd += (amt / config.USD_TO_INR_RATE);
-                u.balance_usd += (amt / config.USD_TO_INR_RATE); // Dynamic balance logic
+                u.total_deposit_usd += (amt / config.USD_TO_INR_RATE); u.balance_usd += (amt / config.USD_TO_INR_RATE);
             } else {
                 const qrUrl = `https://googleapis.com{encodeURIComponent(config.USDT_ADDRESS)}`;
                 await ctx.replyWithPhoto(qrUrl, { caption: `🪙 *USDT (TRC20) QR Code*\n\n💵 *Amount:* $${amt.toFixed(2)}\n📍 *Address:* \`${config.USDT_ADDRESS}\``, reply_markup: kb, parse_mode: "Markdown" });
-                u.total_deposit_usd += amt;
-                u.balance_usd += amt; // Dynamic balance logic
+                u.total_deposit_usd += amt; u.balance_usd += amt;
             } return;
         }
         if (u.awaiting_custom_qty && u.pending_service) {
@@ -110,3 +107,7 @@ module.exports = {
                 await ctx.reply(`🎉 *Confirm Order!* ✅\n\n🆔 *Order ID:* \`${res.data.order}\`\n🛠️ *Service:* ${sInfo.name}\n📊 *Quantity:* \`${u.pending_qty}\`\n💰 *Amount:* ${m.formatMoney(u.pending_cost_usd, u.currency)}\n🔗 *Link:* ${txt}`, { parse_mode: "Markdown" });
             } else { u.pending_orders--; u.cancelled_orders++; await ctx.reply(`❌ Failed: ${res.data?.error || "Error"}`); }
         } catch (e) { u.pending_orders--; await ctx.reply("❌ API Error."); }
+        u.pending_service = null; u.pending_qty = null; u.pending_cost_usd = null;
+    },
+    payDone: async (ctx) => { await ctx.reply(`💌 *Registered!* Send screenshot to @${config.SUPPORT_USERNAME}`); }
+};
