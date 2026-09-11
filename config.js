@@ -6,7 +6,7 @@ module.exports = {
     
     // 👑 ADMIN & PAYMENT PANEL SETTINGS
     ADMIN_ID: 7991401218, 
-    UPI_ID: "shyamji@ybl", 
+    UPI_ID: "prince2026gupta@okicici", 
     MERCHANT_NAME: "HAPPY REACTION", 
     USDT_ADDRESS: "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", 
     USD_TO_INR_RATE: 95.0
