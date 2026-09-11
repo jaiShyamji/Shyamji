@@ -5,8 +5,8 @@ module.exports = {
     SUPPORT_USERNAME: process.env.SUPPORT_USERNAME || "YourSupportUsername",
     
     // 👑 ADMIN & PAYMENT PANEL SETTINGS
-    ADMIN_ID: 8397689339, // <-- BHAI YAHAN APNA असली TELEGRAM USER ID DALO
-    UPI_ID: "shyamji@ybl", 
+    ADMIN_ID: 7991401218, // <-- Bhai tumhari asli ID yahan lock kar di hai
+    UPI_ID: "prince2026gupta@okicici", 
     MERCHANT_NAME: "HAPPY REACTION", 
     USDT_ADDRESS: "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", 
     USD_TO_INR_RATE: 95.0
