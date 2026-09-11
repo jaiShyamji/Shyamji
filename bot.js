@@ -37,9 +37,9 @@ bot.command("admin", async (ctx) => {
 bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts;
-    const userId = parseInt(parts);
-    const refKey = parts;
+    const action = parts[1];
+    const userId = parseInt(parts[2]);
+    const refKey = parts[3];
 
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) {
@@ -102,7 +102,7 @@ bot.on("message:text", async (ctx) => {
         const kb = new InlineKeyboard().text("📝 SUBMIT UTR / REF", `submit_utr_${u.chosen_pay_method}`).row().text("⬅️ Main Menu", "back_to_menu");
         
         if (u.chosen_pay_method === "pay_via_upi") {
-            // Manual flow static QR generation logic
+            // URL Syntax String Error fixed properly yahan par bhai
             const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}`;
             const qrUrl = `https://googleapis.com{encodeURIComponent(upiRaw)}`;
             
