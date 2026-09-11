@@ -5,9 +5,13 @@ module.exports = {
     SUPPORT_USERNAME: process.env.SUPPORT_USERNAME || "YourSupportUsername",
     
     // 👑 ADMIN & PAYMENT PANEL SETTINGS
-    ADMIN_ID: 7991401218, // <-- Bhai tumhari asli ID yahan lock kar di hai
-    UPI_ID: "prince2026gupta@okicici", 
+    ADMIN_ID: 7991401218, 
+    UPI_ID: "shyamji@ybl", 
     MERCHANT_NAME: "HAPPY REACTION", 
     USDT_ADDRESS: "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", 
-    USD_TO_INR_RATE: 95.0
+    USD_TO_INR_RATE: 95.0,
+
+    // 🌐 RAILWAY PORT SETTING
+    PORT: process.env.PORT || 3000,
+    RAILWAY_URL: process.env.RAILWAY_PUBLIC_DOMAIN || "" // Railway public URL automatically utha lega
 };
