@@ -14,21 +14,52 @@ const USD_TO_INR_RATE = 95.0;
 // Mock database (In-memory)
 const USER_DATABASE = {};
 
-// Mock SERVICES_MASTER_DATA (Python से SERVICES_MASTER_DATA को यहाँ परिभाषित करें)
+// SMM Services Data
 const SERVICES_MASTER_DATA = {
-    // उदाहरण के लिए:
-    // "5153": { name: "Telegram Reactions", rate: 0.12, type: "tg_post" }
+    // TELEGRAM REACTIONS
+    "5153": { name: "telegram like (👍) [instant]", rate: 0.12, type: "tg_post" },
+    "5160": { name: "telegram like (👍❤️🔥🥰) [instant]", rate: 0.15, type: "tg_post" },
+    "5161": { name: "telegram like (❤️🔥👏🤩🎉🥰👍) [instant]", rate: 0.10, type: "tg_post" },
+    "5162": { name: "telegram like (🔥) [instant]", rate: 0.15, type: "tg_post" },
+    "5163": { name: "telegram like (❤️) [instant]", rate: 0.15, type: "tg_post" },
+    "5164": { name: "telegram like (👏) [instant]", rate: 0.15, type: "tg_post" },
+    "5165": { name: "telegram like (🤩) [instant]", rate: 0.15, type: "tg_post" },
+    // TELEGRAM POST VIEWS
+    "1512": { name: "telegram post views [Last 1 post] [SUPERFAST]", rate: 0.11, type: "tg_post" },
+    "6855": { name: "telegram post views [1 post] [CHEAPEST]", rate: 0.09, type: "tg_post" },
+    // TELEGRAM MEMBERS
+    "7153": { name: "Telegram Members [Refill 3 Days]", rate: 0.52, type: "tg_channel" },
+    "6787": { name: "Telegram Members [Mixed, Cheap]", rate: 0.38, type: "tg_channel" },
+    "3274": { name: "Telegram Channel Member [Mixed, Cheap]", rate: 0.52, type: "tg_channel" },
+    // INSTAGRAM LIKES
+    "7802": { name: "Likes [Speed 20K/Hr]", rate: 0.21, type: "ig_post" },
+    "7526": { name: "Likes [HQ Instant]", rate: 0.26, type: "ig_post" },
+    "7374": { name: "Likes [Indian Mixed]", rate: 0.19, type: "ig_post" },
+    // INSTAGRAM FOLLOWERS & VIEWS
+    "3602": { name: "Followers [30 Days Refill]", rate: 3.12, type: "ig_profile" },
+    "1658": { name: "Followers [Max 200K]", rate: 1.82, type: "ig_profile" },
+    "1961": { name: "Followers [Max 10K]", rate: 2.48, type: "ig_profile" },
+    "8810": { name: "Followers [No Refill]", rate: 1.77, type: "ig_profile" },
+    "8782": { name: "Followers [Real Look]", rate: 1.97, type: "ig_profile" },
+    "2968": { name: "Views [Unlimited]", rate: 0.40, type: "ig_post" },
+    "6634": { name: "Views [Super Cheap]", rate: 0.30, type: "ig_post" },
+    "7386": { name: "Emergency Views", rate: 0.10, type: "ig_post" }
 };
+
+if (!BOT_TOKEN) {
+    console.error("ERROR: BOT_TOKEN is missing in environment variables!");
+    process.exit(1);
+}
 
 const bot = new Bot(BOT_TOKEN);
 
-// Regex
+// Regex Expressions
 const TG_POST_RE = /https:\/\/t\.me\/([A-Za-z0-9_]+)\/(\d+)\/?/;
 const TG_CHANNEL_RE = /https:\/\/t\.me\/([A-Za-z0-9_]+)\/?/;
 const IG_POST_RE = /https:\/\/(www\.)?instagram\.com\/(?:p|reel|reels|tv)\/([A-Za-z0-9_\-]+)\/?/;
 const IG_PROFILE_RE = /https:\/\/(www\.)?instagram\.com\/([A-Za-z0-9_\.]+)\/?/;
 
-// Helpers
+// Helper Functions
 function getOrCreateUser(userId) {
     if (!USER_DATABASE[userId]) {
         USER_DATABASE[userId] = {
@@ -62,7 +93,6 @@ function validateLink(link, type) {
     return true;
 }
 
-// Inline Keyboards Creators
 function getMainAddFundsKeyboard() {
     return new InlineKeyboard()
         .text("₹100", "amt_100").text("₹200", "amt_200").row()
@@ -71,12 +101,11 @@ function getMainAddFundsKeyboard() {
         .text("⬅️ Back", "back_to_menu");
 }
 
-// Handlers
+// Bot Callbacks and Event Handlers
 bot.callbackQuery("toggle_currency", async (ctx) => {
     const user = getOrCreateUser(ctx.from.id);
     user.currency = user.currency === "USD" ? "INR" : "USD";
     await ctx.answerCallbackQuery({ text: `✔️ Currency set to ${user.currency}` });
-    // यहाँ आप चाहें तो मेनू प्रोफाइल दोबारा रेंडर कर सकते हैं
 });
 
 bot.callbackQuery("main_add_funds", async (ctx) => {
@@ -87,7 +116,6 @@ bot.callbackQuery("main_add_funds", async (ctx) => {
 });
 
 bot.callbackQuery(/^amt_\d+$/, async (ctx) => {
-    const user = getOrCreateUser(ctx.from.id);
     const amtInr = parseInt(ctx.callbackQuery.data.split("_")[1]);
     const amtUsd = amtInr / USD_TO_INR_RATE;
 
@@ -168,7 +196,6 @@ bot.callbackQuery("main_promo", async (ctx) => {
 bot.callbackQuery("main_orders", async (ctx) => {
     const user = getOrCreateUser(ctx.from.id);
     const keyboard = new InlineKeyboard().text("⬅️ Back", "back_to_menu");
-
     const orders = user.history.filter(h => h.order_id);
 
     if (orders.length === 0) {
@@ -213,34 +240,3 @@ bot.callbackQuery("platform_telegram", async (ctx) => {
                `▫️ /5160 - telegram like (👍❤️🔥🥰) [instant] - ${r(0.15)} per 1000\n` +
                `▫️ /5161 - telegram like (❤️🔥👏🤩🎉🥰👍) [instant] - ${r(0.10)} per 1000\n` +
                `▫️ /5162 - telegram like (🔥) [instant] - ${r(0.15)} per 1000\n` +
-               `▫️ /5163 - telegram like (❤️) [instant] - ${r(0.15)} per 1000\n` +
-               `▫️ /5164 - telegram like (👏) [instant] - ${r(0.15)} per 1000\n` +
-               `▫️ /5165 - telegram like (🤩) [instant] - ${r(0.15)} per 1000\n\n` +
-               `👀 *TELEGRAM POST VIEWS*\n` +
-               `▫️ /1512 - telegram post views [Last 1 post] [SUPERFAST] - ${r(0.11)} per 1000\n` +
-               `▫️ /6855 - telegram post views [1 post] [CHEAPEST] - ${r(0.09)} per 1000\n\n` +
-               `👥 *TELEGRAM MEMBERS*\n` +
-               `▫️ /7153 - Telegram Members [Refill 3 Days] - ${r(0.52)} per 1000\n` +
-               `▫️ /6787 - Telegram Members [Mixed, Cheap] - ${r(0.38)} per 1000\n` +
-               `▫️ /3274 - Telegram Channel Member [Mixed, Cheap] - ${r(0.52)} per 1000\n\n` +
-               `🛒 Order karne ke liye code *type* karein (e.g. /5153)`;
-
-    const keyboard = new InlineKeyboard().text("⬅️ Back", "main_services");
-    await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: "Markdown" });
-});
-
-bot.callbackQuery("platform_instagram", async (ctx) => {
-    const user = getOrCreateUser(ctx.from.id);
-    const pref = user.currency;
-    const r = (usd) => pref === "INR" ? `₹${(usd * USD_TO_INR_RATE).toFixed(2)}` : `$${usd.toFixed(2)}`;
-
-    let text = `🔸 *INSTAGRAM SERVICES* [Currency: ${pref}]\n\n` +
-               `❤️ *LIKES*\n` +
-               `▫️ /7802 - Likes [Speed 20K/Hr] - ${r(0.21)}\n` +
-               `▫️ /7526 - Likes [HQ Instant] - ${r(0.26)}\n` +
-               `▫️ /7374 - Likes [Indian Mixed] - ${r(0.19)}\n\n` +
-               `👥 *FOLLOWERS & VIEWS*\n` +
-               `▫️ /3602 - Followers [30 Days Refill] - ${r(3.12)}\n` +
-               `▫️ /1658 - Followers [Max 200K] - ${r(1.82)}\n` +
-               `▫️ /1961 - Followers [Max 10K] - ${r(2.48)}\n` +
-               `▫️ /8810 - Followers [No Refill] - ${r(1.77)}\n` +
