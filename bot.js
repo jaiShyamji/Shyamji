@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Bot, InlineKeyboard } = require('grammy');
-const { run } = require('@grammyjs/runner'); // Advanced Crash Protection Link
+const { run } = require('@grammyjs/runner');
 const config = require('./config');
 const m = require('./menuHandlers');
 const o = require('./orderHandlers');
@@ -8,7 +8,6 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
-// Saare bot commands aur buttons link ho gaye bhai
 bot.command("start", m.start);
 bot.callbackQuery("back_to_menu", m.backMenu);
 bot.callbackQuery("check_balance", m.checkBalance);
@@ -30,7 +29,6 @@ bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, o.initPayMethod);
 bot.callbackQuery("p_done", m.payDone);
 bot.callbackQuery("main_orders", o.ordersHistory);
 
-// Admin command handler
 bot.command("admin", async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai tumhara access confirm hai. Jab koi user payment reference number bhejega, yahan direct alerts aayenge.`, { parse_mode: "Markdown" });
@@ -69,7 +67,6 @@ bot.callbackQuery(/^submit_utr_(.+)$/, async (ctx) => {
     await ctx.reply("📝 *Bhai, ab apna 12-digit UTR / Reference number yahan message box mein type karke send karo:*", { parse_mode: "Markdown" });
 });
 
-// Dynamic Message Text Router
 bot.on("message:text", async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
@@ -109,7 +106,7 @@ bot.on("message:text", async (ctx) => {
         const kb = new InlineKeyboard().text("📝 SUBMIT UTR / REF", `submit_utr_${u.chosen_pay_method}`).row().text("⬅️ Main Menu", "back_to_menu");
         
         if (u.chosen_pay_method === "pay_via_upi") {
-            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${config.MERCHANT_NAME}&am=${amt.toFixed(2)}&cu=INR`;
+            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`;
             const qrUrl = `https://googleapis.com{encodeURIComponent(upiRaw)}`;
             
             await ctx.replyWithPhoto(qrUrl, {
@@ -132,13 +129,10 @@ bot.on("message:text", async (ctx) => {
     await o.handleTextMessages(ctx);
 });
 
-// 🚀 ADVANCED RUNNER INIT: Purane double sessions ko automatically force-close karega
 async function startBotEngine() {
     try {
         console.log("Forcing old sessions to clear...");
         await bot.api.deleteWebhook({ drop_pending_updates: true });
-        
-        // grammY runner se parallel polling start ho gayi bhai
         run(bot); 
         console.log("HAPPY REACTION Perfect Combined Engine Active Now!");
     } catch (err) {
