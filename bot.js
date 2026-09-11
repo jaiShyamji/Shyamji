@@ -101,11 +101,50 @@ function getMainAddFundsKeyboard() {
         .text("⬅️ Back", "back_to_menu");
 }
 
+function getMainMenuKeyboard() {
+    return new InlineKeyboard()
+        .text("🛠️ Services", "main_services")
+        .text("💳 Add Funds", "main_add_funds").row()
+        .text("📦 My Orders", "main_orders")
+        .text("📢 My Channels", "main_channels").row()
+        .text("🎁 Promo", "main_promo")
+        .text("📞 Support", "main_support").row()
+        .text("🔄 Change Currency", "toggle_currency");
+}
+
+// /start Command Handler
+bot.command("start", async (ctx) => {
+    const user = getOrCreateUser(ctx.from.id);
+    await ctx.reply(
+        `👋 Welcome to SMM Panel Bot!\n\n` +
+        `💳 Balance: ${formatMoney(user.balance_usd, user.currency)}\n` +
+        `🛒 Total Orders: ${user.orders_count}\n\n` +
+        `Please select an option below:`,
+        { reply_markup: getMainMenuKeyboard(), parse_mode: "Markdown" }
+    );
+});
+
+// Back to Menu Handler
+bot.callbackQuery("back_to_menu", async (ctx) => {
+    const user = getOrCreateUser(ctx.from.id);
+    await ctx.editMessageText(
+        `👋 Welcome back to SMM Panel Bot!\n\n` +
+        `💳 Balance: ${formatMoney(user.balance_usd, user.currency)}\n` +
+        `🛒 Total Orders: ${user.orders_count}\n\n` +
+        `Please select an option below:`,
+        { reply_markup: getMainMenuKeyboard(), parse_mode: "Markdown" }
+    );
+});
+
 // Bot Callbacks and Event Handlers
 bot.callbackQuery("toggle_currency", async (ctx) => {
     const user = getOrCreateUser(ctx.from.id);
     user.currency = user.currency === "USD" ? "INR" : "USD";
     await ctx.answerCallbackQuery({ text: `✔️ Currency set to ${user.currency}` });
+    await ctx.editMessageText(
+        `💳 Balance updated: ${formatMoney(user.balance_usd, user.currency)}\n\nPlease select an option below:`,
+        { reply_markup: getMainMenuKeyboard(), parse_mode: "Markdown" }
+    );
 });
 
 bot.callbackQuery("main_add_funds", async (ctx) => {
@@ -207,36 +246,3 @@ bot.callbackQuery("main_orders", async (ctx) => {
     const lastOrders = orders.slice(-10);
     for (const o of lastOrders) {
         text += `🆔 OID: \`${o.order_id}\`\n` +
-                `🛠️ Service: ${o.service_id}\n` +
-                `📊 Qty: ${o.qty}\n` +
-                `💰 Cost: ${formatMoney(o.cost_usd, user.currency)} | Status: ${o.status}\n\n`;
-    }
-
-    await ctx.editMessageText(text, { reply_markup: keyboard, parse_mode: "Markdown" });
-});
-
-bot.callbackQuery("main_services", async (ctx) => {
-    const keyboard = new InlineKeyboard()
-        .text("🔹 TELEGRAM", "platform_telegram")
-        .text("🔸 INSTAGRAM", "platform_instagram").row()
-        .text("🔹 FACEBOOK", "platform_facebook")
-        .text("🔸 YOUTUBE", "platform_youtube").row()
-        .text("⬅️ Back", "back_to_menu");
-
-    await ctx.editMessageText(
-        `🛠️ *Select Platform / प्लेटफार्म चुनें:*\n\nAap kiski services dekhna chahte hain?`,
-        { reply_markup: keyboard, parse_mode: "Markdown" }
-    );
-});
-
-bot.callbackQuery("platform_telegram", async (ctx) => {
-    const user = getOrCreateUser(ctx.from.id);
-    const pref = user.currency;
-    const r = (usd) => pref === "INR" ? `₹${(usd * USD_TO_INR_RATE).toFixed(2)}` : `$${usd.toFixed(2)}`;
-
-    let text = `🔹 *TELEGRAM SERVICES* [Currency: ${pref}]\n\n` +
-               `💬 *TELEGRAM REACTIONS*\n` +
-               `▫️ /5153 - telegram like (👍) [instant] - ${r(0.12)} per 1000\n` +
-               `▫️ /5160 - telegram like (👍❤️🔥🥰) [instant] - ${r(0.15)} per 1000\n` +
-               `▫️ /5161 - telegram like (❤️🔥👏🤩🎉🥰👍) [instant] - ${r(0.10)} per 1000\n` +
-               `▫️ /5162 - telegram like (🔥) [instant] - ${r(0.15)} per 1000\n` +
