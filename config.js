@@ -1,4 +1,5 @@
 module.exports = {
+module.exports = {
     BOT_TOKEN: process.env.BOT_TOKEN,
     SMM_API_URL: process.env.SMM_API_URL || "https://smmlite.com",
     SMM_API_KEY: process.env.SMM_API_KEY,
@@ -9,14 +10,12 @@ module.exports = {
     USD_TO_INR_RATE: 95.0,
 
     // 🇮🇳 UPI MANUAL PAYMENT SETTINGS
-    UPI_ID: "prince2026gupta@okicici", // Yahan apni UPI ID dalo bhai
+    UPI_ID: "shyamji@ybl", // Yahan apni UPI ID dalo bhai
     MERCHANT_NAME: "HAPPY REACTION", 
-    // Is link se bot automatically har baar tumhari UPI ID ka QR bana lega:
-    UPI_QR_LINK: "https://googleapis.com" + encodeURIComponent("upi://pay?pa=prince2026gupta@okicici&pn=HAPPY%20REACTION"),
+    // Link ekdum perfect kar diya hai bhai chart waala:
+    UPI_QR_LINK: "https://googleapis.com",
 
     // 🪙 USDT MANUAL PAYMENT SETTINGS
     USDT_ADDRESS: "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Yahan apna USDT address dalo bhai
-    // Is link se bot automatically tumhare USDT address ka QR bana lega:
-    USDT_QR_LINK: "https://googleapis.com" + encodeURIComponent("TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    USDT_QR_LINK: "https://googleapis.com"
 };
-
