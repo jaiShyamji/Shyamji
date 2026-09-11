@@ -36,7 +36,7 @@ bot.command("admin", async (ctx) => {
     await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai tumhara admin access active hai!`, { parse_mode: "Markdown" });
 });
 
-// 👑 ADMIN ACTIONS: APPROVE / REJECT PIPELINE FIXED
+// 👑 ADMIN ACTIONS: APPROVE / REJECT PIPELINE
 bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
@@ -55,7 +55,6 @@ bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
         u.balance_usd += depositData.amount_usd;
         u.total_deposit_usd += depositData.amount_usd;
         
-        // Tumhare bataye anusar reply message template
         const successMsg = `✅ *Payment Added Successful!* 💰\n\nBhai tumhara payment verify ho gaya hai.\n✨ *Added Amount:* ${m.formatMoney(depositData.amount_usd, u.currency)}\n💳 *Total Balance:* ${m.formatMoney(u.balance_usd, u.currency)}`;
         
         await bot.api.sendMessage(userId, successMsg, { parse_mode: "Markdown" });
@@ -74,12 +73,12 @@ bot.callbackQuery(/^user_paid_(via_upi|via_usdt)$/, async (ctx) => {
     await ctx.editMessageText("📝 *Bhai, ab apna 12-digit UTR / Reference number niche message box mein type karke send karo:*", { parse_mode: "Markdown" });
 });
 
-// ⚡ LIVE TEXT INPUT RECEIVER (Payment QR Generator + UTR Verification Flow)
+// ⚡ LIVE TEXT INPUT RECEIVER
 bot.on("message:text", async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
 
-    // 1. Agar User Payment ke baad UTR/Reference number type karke bhej raha hai
+    // 1. UTR Submission handler
     if (u.awaiting_utr) {
         u.awaiting_utr = false;
         const refKey = Date.now().toString();
@@ -95,6 +94,7 @@ bot.on("message:text", async (ctx) => {
             `🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n` +
             `👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n` +
             `💰 *Expected Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n` +
+            `🛠️ *Method:* \`${u.chosen_pay_method === "pay_via_upi" ? "UPI" : "USDT"}\`\n` +
             `📝 *Submitted UTR/Hash:* \`${txt}\`\n\nBhai verify karke action chuno:`, 
             { reply_markup: adminKb, parse_mode: "Markdown" }
         );
@@ -103,7 +103,7 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    // 2. Agar User Add Fund par click karne ke baad Amount type kar raha hai
+    // 2. Add Fund Amount handler
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) {
@@ -114,24 +114,27 @@ bot.on("message:text", async (ctx) => {
         u.awaiting_deposit_amt = false;
         u.current_deposit_amt = amt;
         
-        // Tumhare bataye anusar "PAID" button layout set kar diya hai bhai
         const kb = new InlineKeyboard()
             .text("🟢 PAID", `user_paid_${u.chosen_pay_method}`).row()
             .text("⬅️ Cancel", "back_to_menu");
         
+        // 🔹 AGAR USER NE UPI SE ADD FUND CHUNA HAI
         if (u.chosen_pay_method === "pay_via_upi") {
             const upiRaw = "upi://pay?pa=" + config.UPI_ID + "&pn=" + encodeURIComponent(config.MERCHANT_NAME);
             const qrUrl = "https://googleapis.com" + encodeURIComponent(upiRaw);
             
             await ctx.replyWithPhoto(qrUrl, { 
-                caption: `🟢 *MANUAL PAYMENT SYSTEM*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 *Step 1:* Is QR code par ₹${amt.toFixed(2)} pay karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
+                caption: `🟢 *UPI MANUAL PAYMENT SYSTEM*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 *Step 1:* Is QR code par ₹${amt.toFixed(2)} pay karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
                 reply_markup: kb, 
                 parse_mode: "Markdown" 
             });
-        } else {
+        } 
+        // 🔸 AGAR USER NE USDT SE ADD FUND CHUNA HAI
+        else {
             const qrUrl = "https://googleapis.com" + encodeURIComponent(config.USDT_ADDRESS);
+            
             await ctx.replyWithPhoto(qrUrl, { 
-                caption: `🪙 *USDT MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${amt.toFixed(2)}\n📍 *Address:* \`${config.USDT_ADDRESS}\`\n\n👉 *Step 1:* Is address par $${amt.toFixed(2)} transfer karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
+                caption: `🪙 *USDT (TRC20) MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${amt.toFixed(2)}\n📍 *USDT Address:* \`${config.USDT_ADDRESS}\`\n\n👉 *Step 1:* Is address par $${amt.toFixed(2)} transfer karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
                 reply_markup: kb, 
                 parse_mode: "Markdown" 
             });
@@ -139,11 +142,9 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    // Normal text messages forward karna (jaise links verify karna order pipeline mein)
     await o.handleTextMessages(ctx);
 });
 
-// Single instance polling launcher engine
 async function startBotEngine() {
     try {
         console.log("Wiping out old container links...");
@@ -157,4 +158,3 @@ async function startBotEngine() {
 }
 
 startBotEngine();
-
