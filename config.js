@@ -8,7 +8,7 @@ module.exports = {
     SUPPORT_USERNAME: process.env.SUPPORT_USERNAME || "YourSupportUsername",
     
     // 💳 ADD FUNDS SETTINGS (ऑटोमेटिक क्यूआर जनरेशन के लिए)
-    UPI_ID: "shyamji@ybl", // अपनी असली UPI ID यहाँ डालें
+    UPI_ID: "prince2026gupta@okicici", // अपनी असली UPI ID यहाँ डालें
     MERCHANT_NAME: "SMM Panel", // अपना या पैनल का नाम यहाँ लिखें
     USDT_ADDRESS: "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // अपना TRC20 एड्रेस यहाँ डालें
     USD_TO_INR_RATE: 95.0
