@@ -37,9 +37,9 @@ bot.command("admin", async (ctx) => {
 bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts[1];
-    const userId = parseInt(parts[2]);
-    const refKey = parts[3];
+    const action = parts;
+    const userId = parseInt(parts);
+    const refKey = parts;
 
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) {
@@ -63,7 +63,7 @@ bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
 bot.callbackQuery(/^submit_utr_(.+)$/, async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id);
     u.awaiting_utr = true;
-    await ctx.reply("📝 *Bhai, apna 12-digit UTR/Reference number yahan send karo:*", { parse_mode: "Markdown" });
+    await ctx.reply("📝 *Bhai, ab apna 12-digit UTR / Reference number yahan box mein type karke send karo:*", { parse_mode: "Markdown" });
 });
 
 bot.on("message:text", async (ctx) => {
@@ -82,11 +82,11 @@ bot.on("message:text", async (ctx) => {
             .text("❌ REJECT", `adm_rej_${ctx.from.id}_${refKey}`);
 
         await bot.api.sendMessage(config.ADMIN_ID, 
-            `🔔 *NEW PAYMENT SUBMISSION!* 🔔\n\n👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n💰 *Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n📝 *UTR:* \`${txt}\``, 
+            `🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n💰 *Expected Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n📝 *Submitted UTR/Hash:* \`${txt}\`\n\nBhai verify karke action chuno:`, 
             { reply_markup: adminKb, parse_mode: "Markdown" }
         );
 
-        await ctx.reply(`💌 *Request Submitted!* ✅\n\nRef \`${txt}\` verify hote hi balance add ho jayega bhai!`);
+        await ctx.reply(`💌 *Request Submitted!* ✅\n\nTumhara Reference number \`${txt}\` verification ke liye admin ke paas bhej diya gaya hai. Kuch hi der mein balance add ho jayega!`);
         return;
     }
 
@@ -102,12 +102,22 @@ bot.on("message:text", async (ctx) => {
         const kb = new InlineKeyboard().text("📝 SUBMIT UTR / REF", `submit_utr_${u.chosen_pay_method}`).row().text("⬅️ Main Menu", "back_to_menu");
         
         if (u.chosen_pay_method === "pay_via_upi") {
-            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`;
+            // Manual flow static QR generation logic
+            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}`;
             const qrUrl = `https://googleapis.com{encodeURIComponent(upiRaw)}`;
-            await ctx.replyWithPhoto(qrUrl, { caption: `🟢 *UPI AUTOMATIC QR CODE*\n\n💵 *Amount:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 Scan karke payment karein aur neeche UTR submit karein bhai.`, reply_markup: kb, parse_mode: "Markdown" });
+            
+            await ctx.replyWithPhoto(qrUrl, { 
+                caption: `🟢 *MANUAL PAYMENT SYSTEM*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 *Step 1:* Is QR code par ₹${amt.toFixed(2)} pay karein.\n👉 *Step 2:* Pay karne ke baad neeche "SUBMIT UTR / REF" button daba kar apna 12-digit UTR number send karein.`, 
+                reply_markup: kb, 
+                parse_mode: "Markdown" 
+            });
         } else {
             const qrUrl = `https://googleapis.com{encodeURIComponent(config.USDT_ADDRESS)}`;
-            await ctx.replyWithPhoto(qrUrl, { caption: `🪙 *USDT QR CODE*\n\n💵 *Amount:* $${amt.toFixed(2)}\n📍 *Address:* \`${config.USDT_ADDRESS}\`\n\n👉 Transfer karke neeche transaction hash send karein bhai.`, reply_markup: kb, parse_mode: "Markdown" });
+            await ctx.replyWithPhoto(qrUrl, { 
+                caption: `🪙 *USDT MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${amt.toFixed(2)}\n📍 *Address:* \`${config.USDT_ADDRESS}\`\n\n👉 Transfer karke neeche transaction hash send karein bhai.`, 
+                reply_markup: kb, 
+                parse_mode: "Markdown" 
+            });
         }
         return;
     }
