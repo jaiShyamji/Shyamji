@@ -2,45 +2,18 @@ require('dotenv').config();
 const { Bot, InlineKeyboard } = require('grammy');
 const axios = require('axios');
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const SMM_API_URL = process.env.SMM_API_URL || "https://smmlite.com/api/v2";
-const SMM_API_KEY = process.env.SMM_API_KEY;
-const SUPPORT_USERNAME = process.env.SUPPORT_USERNAME || "YourSupportUsername";
-const UPI_ID = process.env.UPI_ID || "your-vpa@ybl";
-const USDT_ADDRESS = process.env.USDT_ADDRESS || "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-const USD_TO_INR_RATE = 95.0;
+const config = require('./config');
+const SERVICES_MASTER_DATA = require('./services');
 
+if (!config.BOT_TOKEN) {
+    console.error("ERROR: BOT_TOKEN is missing!");
+    process.exit(1);
+}
+
+const bot = new Bot(config.BOT_TOKEN);
 const USER_DATABASE = {};
 
-const SERVICES_MASTER_DATA = {
-    "5153": { name: "telegram like (👍)", rate: 0.12, type: "tg_post" },
-    "5160": { name: "telegram like (👍❤️🔥🥰)", rate: 0.15, type: "tg_post" },
-    "5161": { name: "telegram like (❤️🔥👏🤩🎉🥰👍)", rate: 0.10, type: "tg_post" },
-    "5162": { name: "telegram like (🔥)", rate: 0.15, type: "tg_post" },
-    "5163": { name: "telegram like (❤️)", rate: 0.15, type: "tg_post" },
-    "5164": { name: "telegram like (👏)", rate: 0.15, type: "tg_post" },
-    "5165": { name: "telegram like (🤩)", rate: 0.15, type: "tg_post" },
-    "1512": { name: "telegram post views [Last 1 post]", rate: 0.11, type: "tg_post" },
-    "6855": { name: "telegram post views [1 post]", rate: 0.09, type: "tg_post" },
-    "7153": { name: "Telegram Members [Refill 3 Days]", rate: 0.52, type: "tg_channel" },
-    "6787": { name: "Telegram Members [Mixed, Cheap]", rate: 0.38, type: "tg_channel" },
-    "3274": { name: "Telegram Channel Member", rate: 0.52, type: "tg_channel" },
-    "7802": { name: "Likes [Speed 20K/Hr]", rate: 0.21, type: "ig_post" },
-    "7526": { name: "Likes [HQ Instant]", rate: 0.26, type: "ig_post" },
-    "7374": { name: "Likes [Indian Mixed]", rate: 0.19, type: "ig_post" },
-    "3602": { name: "Followers [30 Days Refill]", rate: 3.12, type: "ig_profile" },
-    "1658": { name: "Followers [Max 200K]", rate: 1.82, type: "ig_profile" },
-    "1961": { name: "Followers [Max 10K]", rate: 2.48, type: "ig_profile" },
-    "8810": { name: "Followers [No Refill]", rate: 1.77, type: "ig_profile" },
-    "8782": { name: "Followers [Real Look]", rate: 1.97, type: "ig_profile" },
-    "2968": { name: "Views [Unlimited]", rate: 0.40, type: "ig_post" },
-    "6634": { name: "Views [Super Cheap]", rate: 0.30, type: "ig_post" },
-    "7386": { name: "Emergency Views", rate: 0.10, type: "ig_post" }
-};
-
-if (!BOT_TOKEN) { process.exit(1); }
-const bot = new Bot(BOT_TOKEN);
-
+// Link Validation
 const TG_POST_RE = /https:\/\/t\.me\/([A-Za-z0-9_]+)\/(\d+)\/?/;
 const TG_CHANNEL_RE = /https:\/\/t\.me\/([A-Za-z0-9_]+)\/?/;
 const IG_POST_RE = /https:\/\/(www\.)?instagram\.com\/(?:p|reel|reels|tv)\/([A-Za-z0-9_\-]+)\/?/;
@@ -48,93 +21,239 @@ const IG_PROFILE_RE = /https:\/\/(www\.)?instagram\.com\/([A-Za-z0-9_\.]+)\/?/;
 
 function getOrCreateUser(id) {
     if (!USER_DATABASE[id]) {
-        USER_DATABASE[id] = { balance_usd: 0.0, spent_usd: 0.0, orders_count: 0, channels: [], history: [], order_details: {}, currency: "INR", pending_service: null, pending_qty: null, pending_cost_usd: null };
+        USER_DATABASE[id] = { 
+            balance_usd: 100.0, 
+            spent_usd: 0.0, 
+            orders_count: 0, 
+            channels: [], 
+            history: [], 
+            order_details: {}, 
+            currency: "INR", 
+            pending_service: null, 
+            pending_qty: null, 
+            pending_cost_usd: null,
+            awaiting_custom_qty: false
+        };
     }
     return USER_DATABASE[id];
 }
 
-function formatMoney(usd, pref) { return pref === "INR" ? `₹${(usd * USD_TO_INR_RATE).toFixed(2)}` : `$${usd.toFixed(2)}`; }
-function validateLink(l, t) { if (t === "tg_post") return TG_POST_RE.test(l); if (t === "tg_channel") return TG_CHANNEL_RE.test(l); if (t === "ig_post") return IG_POST_RE.test(l); if (t === "ig_profile") return IG_PROFILE_RE.test(l); return true; }
-function getMainAddFundsKeyboard() { return new InlineKeyboard().text("₹100", "amt_100").text("₹200", "amt_200").row().text("₹500", "amt_500").text("₹1000", "amt_1000").row().text("₹2000", "amt_2000").text("₹5000", "amt_5000").row().text("⬅️ Back", "back_to_menu"); }
-function getMainMenuKeyboard() { return new InlineKeyboard().text("🛠️ Services", "main_services").text("💳 Add Funds", "main_add_funds").row().text("📦 My Orders", "main_orders").text("📢 My Channels", "main_channels").row().text("🎁 Promo", "main_promo").text("📞 Support", "main_support").row().text("🔄 Change Currency", "toggle_currency"); }
-bot.command("start", async (ctx) => { const u = getOrCreateUser(ctx.from.id); await ctx.reply(`👋 Welcome!\n\n💳 Balance: ${formatMoney(u.balance_usd, u.currency)}`, { reply_markup: getMainMenuKeyboard() }); });
-bot.callbackQuery("back_to_menu", async (ctx) => { const u = getOrCreateUser(ctx.from.id); await ctx.editMessageText(`👋 Menu\n\n💳 Balance: ${formatMoney(u.balance_usd, u.currency)}`, { reply_markup: getMainMenuKeyboard() }); });
-bot.callbackQuery("toggle_currency", async (ctx) => { const u = getOrCreateUser(ctx.from.id); u.currency = u.currency === "USD" ? "INR" : "USD"; await ctx.answerCallbackQuery({ text: `Currency: ${u.currency}` }); await ctx.editMessageText(`💳 Balance: ${formatMoney(u.balance_usd, u.currency)}`, { reply_markup: getMainMenuKeyboard() }); });
-bot.callbackQuery("main_add_funds", async (ctx) => { await ctx.editMessageText(`💳 *Add Funds:*`, { reply_markup: getMainAddFundsKeyboard(), parse_mode: "Markdown" }); });
+function formatMoney(usd, pref) { 
+    return pref === "INR" ? `₹${(usd * config.USD_TO_INR_RATE).toFixed(2)}` : `$${usd.toFixed(2)}`; 
+}
 
-bot.callbackQuery(/^amt_\d+$/, async (ctx) => {
-    const amt = parseInt(ctx.callbackQuery.data.split("_")[1]);
-    const keyboard = new InlineKeyboard().text("✅ Paid", `paid_${amt}`).row().text("⬅️ Back", "main_add_funds");
-    await ctx.editMessageText(`💵 Pay: ₹${amt}\n📍 UPI: \`${UPI_ID}\`\n🪙 USDT: \`${USDT_ADDRESS}\``, { reply_markup: keyboard, parse_mode: "Markdown" });
+function validateLink(l, t) { 
+    if (t === "tg_post") return TG_POST_RE.test(l); 
+    if (t === "tg_channel") return TG_CHANNEL_RE.test(l); 
+    if (t === "ig_post") return IG_POST_RE.test(l); 
+    if (t === "ig_profile") return IG_PROFILE_RE.test(l); 
+    return true; 
+}
+
+// 1. पहली प्रॉब्लम का सोल्यूशन: यहाँ चारों बटन्स ग्रिड में ऐड कर दिए हैं
+function getPlatformsKeyboard() {
+    return new InlineKeyboard()
+        .text("🔹 TELEGRAM", "platform_telegram")
+        .text("🔸 INSTAGRAM", "platform_instagram").row()
+        .text("🔺 YOUTUBE", "platform_youtube")
+        .text("🟩 FACEBOOK", "platform_facebook").row()
+        .text("⬅️ Main Menu", "back_to_menu");
+}
+
+// नया क्वांटिटी कीबोर्ड लेआउट
+function getQuantityKeyboard(serviceId) {
+    return new InlineKeyboard()
+        .text("100", `qty_${serviceId}_100`).text("200", `qty_${serviceId}_200`).row()
+        .text("500", `qty_${serviceId}_500`).text("1000", `qty_${serviceId}_1000`).row()
+        .text("5000", `qty_${serviceId}_5000`).text("10000", `qty_${serviceId}_10000`).row()
+        .text("⚙️ Custom Amount", `qty_${serviceId}_custom`).row()
+        .text("📦 Order History", "main_orders").text("⬅️ Back", "main_services");
+}
+
+function getMainMenuKeyboard() { 
+    return new InlineKeyboard()
+        .text("🛠️ Services", "main_services")
+        .text("💳 Add Funds", "main_add_funds").row()
+        .text("📦 My Orders", "main_orders")
+        .text("🔄 Change Currency", "toggle_currency"); 
+}
+
+bot.command("start", async (ctx) => { 
+    const u = getOrCreateUser(ctx.from.id); 
+    await ctx.reply(`👋 Welcome to SMM Panel Bot!\n\n💳 Balance: ${formatMoney(u.balance_usd, u.currency)}`, { reply_markup: getMainMenuKeyboard() }); 
 });
 
-bot.callbackQuery(/^paid_\d+$/, async (ctx) => {
-    const amt = parseInt(ctx.callbackQuery.data.split("_")[1]);
-    getOrCreateUser(ctx.from.id).history.push({ type: "deposit", amount_inr: amt, status: "Pending ⏳" });
-    await ctx.editMessageText(`💌 Request Sent! Send screenshot to @${SUPPORT_USERNAME}`, { reply_markup: new InlineKeyboard().text("⬅️ Menu", "back_to_menu") });
-});
-
-bot.callbackQuery("main_channels", async (ctx) => {
-    const botInfo = await ctx.api.getMe();
-    const url = `https://t.me{botInfo.username}?startchannel=true&admin=post_messages+edit_messages+delete_messages+invite_users`;
-    await ctx.editMessageText(`📢 Channels Menu`, { reply_markup: new InlineKeyboard().url("➕ Add Bot", url).row().text("⬅️ Back", "back_to_menu") });
-});
-
-bot.callbackQuery("main_support", async (ctx) => { await ctx.editMessageText(`📞 Contact @${SUPPORT_USERNAME}`, { reply_markup: new InlineKeyboard().text("⬅️ Back", "back_to_menu") }); });
-bot.callbackQuery("main_promo", async (ctx) => { await ctx.editMessageText(`🎁 Promo Coming Soon!`, { reply_markup: new InlineKeyboard().text("⬅️ Back", "back_to_menu") }); });
-
-bot.callbackQuery("main_orders", async (ctx) => {
-    const u = getOrCreateUser(ctx.from.id);
-    await ctx.editMessageText(`📦 Total Orders: ${u.orders_count}`, { reply_markup: new InlineKeyboard().text("⬅️ Back", "back_to_menu") });
+bot.callbackQuery("back_to_menu", async (ctx) => { 
+    const u = getOrCreateUser(ctx.from.id); 
+    await ctx.editMessageText(`👋 Main Menu\n\n💳 Balance: ${formatMoney(u.balance_usd, u.currency)}`, { reply_markup: getMainMenuKeyboard() }); 
 });
 
 bot.callbackQuery("main_services", async (ctx) => {
-    const keyboard = new InlineKeyboard().text("🔹 TELEGRAM", "platform_telegram").text("🔸 INSTAGRAM", "platform_instagram").row().text("⬅️ Back", "back_to_menu");
-    await ctx.editMessageText(`🛠️ Select Platform:`, { reply_markup: keyboard });
+    await ctx.editMessageText(`🛠️ *Select Platform / प्लेटफार्म चुनें:*`, { reply_markup: getPlatformsKeyboard(), parse_mode: "Markdown" });
 });
 
+// 2. दूसरी प्रॉब्लम का सोल्यूशन: यहाँ टेलीग्राम की सभी सर्विसेज की पूरी लिस्ट बिना किसी फ़िल्टर के शो होगी
 bot.callbackQuery("platform_telegram", async (ctx) => {
-    let t = `🔹 TELEGRAM SERVICES\n\nOrder matching code type karein (e.g. /5153)`;
-    await ctx.editMessageText(t, { reply_markup: new InlineKeyboard().text("⬅️ Back", "main_services") });
+    let t = `🔹 *TELEGRAM SERVICES*\n\n`;
+    
+    t += `💬 *TELEGRAM REACTIONS*\n`;
+    const reactions = ["5153", "5160", "5161", "5162", "5163", "5164", "5165"];
+    reactions.forEach(id => {
+        if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`;
+    });
+
+    t += `\n👀 *TELEGRAM POST VIEWS*\n`;
+    const views = ["1512", "6855"];
+    views.forEach(id => {
+        if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`;
+    });
+
+    t += `\n👥 *TELEGRAM MEMBERS*\n`;
+    const members = ["7153", "6787", "3274"];
+    members.forEach(id => {
+        if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`;
+    });
+
+    t += `\n🛒 Order matching code type karein (e.g. /5153)`;
+    await ctx.editMessageText(t, { reply_markup: new InlineKeyboard().text("⬅️ Back", "main_services"), parse_mode: "Markdown" });
 });
 
+// इंस्टाग्राम की सभी सर्विसेज की पूरी लिस्ट
 bot.callbackQuery("platform_instagram", async (ctx) => {
-    await ctx.editMessageText(`🔸 INSTAGRAM SERVICES\n\nOrder matching code type karein (e.g. /7802)`, { reply_markup: new InlineKeyboard().text("⬅️ Back", "main_services") });
+    let t = `🔸 *INSTAGRAM SERVICES*\n\n`;
+    
+    t += `❤️ *INSTAGRAM LIKES*\n`;
+    const likes = ["7802", "7526", "7374"];
+    likes.forEach(id => {
+        if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`;
+    });
+
+    t += `\n👥 *INSTAGRAM FOLLOWERS & VIEWS*\n`;
+    const instaOther = ["3602", "1658", "1961", "8810", "8782", "2968", "6634", "7386"];
+    instaOther.forEach(id => {
+        if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`;
+    });
+
+    t += `\n🛒 Order matching code type karein (e.g. /7802)`;
+    await ctx.editMessageText(t, { reply_markup: new InlineKeyboard().text("⬅️ Back", "main_services"), parse_mode: "Markdown" });
 });
 
+bot.callbackQuery("platform_facebook", async (ctx) => {
+    let t = `🟩 *FACEBOOK SERVICES*\n\n`;
+    const fbIds = ["8001", "8002", "8003"];
+    fbIds.forEach(id => {
+        if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`;
+    });
+    t += `\n🛒 Order matching code type karein (e.g. /8001)`;
+    await ctx.editMessageText(t, { reply_markup: new InlineKeyboard().text("⬅️ Back", "main_services"), parse_mode: "Markdown" });
+});
+
+bot.callbackQuery("platform_youtube", async (ctx) => {
+    let t = `🔺 *YOUTUBE SERVICES*\n\n`;
+    const ytIds = ["9001", "9002", "9003"];
+    ytIds.forEach(id => {
+        if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`;
+    });
+    t += `\n🛒 Order matching code type karein (e.g. /9001)`;
+    await ctx.editMessageText(t, { reply_markup: new InlineKeyboard().text("⬅️ Back", "main_services"), parse_mode: "Markdown" });
+});
+
+// कोड डिटेक्ट और क्वांटिटी फ्लो
 bot.hears(/^\/\d+$/, async (ctx) => {
     const id = ctx.message.text.slice(1);
     if (!SERVICES_MASTER_DATA[id]) return;
-    getOrCreateUser(ctx.from.id).pending_service = id;
-    const keyboard = new InlineKeyboard().text("1000", `buy_${id}_1000`).text("5000", `buy_${id}_5000`).row().text("❌ Cancel", "back_to_menu");
-    await ctx.reply(`❓ Service [${SERVICES_MASTER_DATA[id].name}] ke liye quantity chunein:`, { reply_markup: keyboard });
+    
+    const u = getOrCreateUser(ctx.from.id);
+    u.pending_service = id;
+    u.awaiting_custom_qty = false;
+
+    await ctx.reply(`👉 *You selected:* ${SERVICES_MASTER_DATA[id].name}\n\n🔢 *Select Your Quantity:*`, { 
+        reply_markup: getQuantityKeyboard(id),
+        parse_mode: "Markdown"
+    });
 });
 
-bot.callbackQuery(/^buy_\d+_\d+$/, async (ctx) => {
-    const p = ctx.callbackQuery.data.split("_");
-    const id = p[1]; const q = parseInt(p[2]);
-    if (!SERVICES_MASTER_DATA[id]) return;
+bot.callbackQuery(/^qty_\d+_(.+)$/, async (ctx) => {
+    const parts = ctx.callbackQuery.data.split("_");
+    const serviceId = parts[1];
+    const qtyType = parts[2];
     const u = getOrCreateUser(ctx.from.id);
-    u.pending_service = id; u.pending_qty = q; u.pending_cost_usd = (q / 1000.0) * SERVICES_MASTER_DATA[id].rate;
-    await ctx.editMessageText(`📋 Order Summary\nCost: $${u.pending_cost_usd}\n\n💬 Target Link send karein:`, { reply_markup: new InlineKeyboard().text("❌ Cancel", "back_to_menu") });
+
+    if (qtyType === "custom") {
+        u.awaiting_custom_qty = true;
+        await ctx.editMessageText("🔢 Please type your custom quantity amount:");
+        return;
+    }
+
+    const qty = parseInt(qtyType);
+    await proceedToLinkRequest(ctx, u, serviceId, qty);
 });
+
+async function proceedToLinkRequest(ctx, u, serviceId, qty) {
+    const serviceInfo = SERVICES_MASTER_DATA[serviceId];
+    u.pending_qty = qty;
+    u.pending_cost_usd = (qty / 1000.0) * serviceInfo.rate;
+
+    let hint = "Send target link.";
+    if (serviceInfo.type.startsWith("tg")) hint = "🔗 Send Telegram link:";
+    else if (serviceInfo.type.startsWith("ig")) hint = "🔗 Send Instagram link:";
+    else hint = "🔗 Send Target link:";
+
+    const msgText = `📋 *Order Summary*\n\n🛠️ Service: \`${serviceInfo.name}\`\n📊 Quantity: \`${qty}\`\n💸 Cost: ${formatMoney(u.pending_cost_usd, u.currency)}\n\n💬 ${hint}`;
+    
+    if (ctx.callbackQuery) {
+        await ctx.editMessageText(msgText, { parse_mode: "Markdown" });
+    } else {
+        await ctx.reply(msgText, { parse_mode: "Markdown" });
+    }
+}
 
 bot.on("message:text", async (ctx) => {
     const u = getOrCreateUser(ctx.from.id);
-    if (!u.pending_service) return;
-    const id = u.pending_service; const link = ctx.message.text.trim();
-    if (!validateLink(link, SERVICES_MASTER_DATA[id].type)) { await ctx.reply("❌ Invalid Link Format!"); return; }
     
+    if (u.awaiting_custom_qty && u.pending_service) {
+        const qty = parseInt(ctx.message.text.trim());
+        if (isNaN(qty) || qty <= 0) {
+            await ctx.reply("❌ Invalid quantity. Please send a valid number:");
+            return;
+        }
+        u.awaiting_custom_qty = false;
+        await proceedToLinkRequest(ctx, u, u.pending_service, qty);
+        return;
+    }
+
+    if (!u.pending_service || !u.pending_qty) return;
+
+    const id = u.pending_service;
+    const link = ctx.message.text.trim();
+    const serviceInfo = SERVICES_MASTER_DATA[id];
+
+    if (!validateLink(link, serviceInfo.type)) { 
+        await ctx.reply("❌ *Invalid Link Format!*\nPlease check the service type and try again.", { parse_mode: "Markdown" }); 
+        return; 
+    }
+    
+    if (u.balance_usd < u.pending_cost_usd) {
+        await ctx.reply(`❌ *Insufficient Balance!*\nRequired: ${formatMoney(u.pending_cost_usd, u.currency)}`);
+        u.pending_service = null;
+        return;
+    }
+
     try {
-        const res = await axios.post(SMM_API_URL, null, { params: { key: SMM_API_KEY, action: "add", service: id, link: link, quantity: u.pending_qty }, timeout: 20000 });
+        const res = await axios.post(config.SMM_API_URL, null, { 
+            params: { key: config.SMM_API_KEY, action: "add", service: id, link: link, quantity: u.pending_qty }, 
+            timeout: 20000 
+        });
+
         if (res.data && res.data.order) {
+            u.balance_usd -= u.pending_cost_usd;
+            u.spent_usd += u.pending_cost_usd;
             u.orders_count++;
-            await ctx.reply(`✅ Order Placed! ID: ${res.data.order}`);
-        } else { await ctx.reply(`❌ Failed: ${res.data?.error || "Unknown"}`); }
-    } catch (e) { await ctx.reply("❌ API Connection Error"); }
-    u.pending_service = null;
-});
+            
+            u.history.push({ order_id: res.data.order, service_id: id, qty: u.pending_qty, cost_usd: u.pending_cost_usd, status: "Success ✅" });
 
-bot.start();
-console.log("Bot standard initialized successfully...");
-
+            await ctx.reply(
+                `🎉 *Confirm Order!* ✅\n\n` +
+                `🆔 *Order ID:* \`${res.data.order}\`\n` +
+                `🛠️ *Service:* ${serviceInfo.name}\n` +
+                `📊 *Quantity:* \`${u.pending_qty}\`\n` +
