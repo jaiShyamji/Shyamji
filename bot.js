@@ -40,9 +40,9 @@ bot.command("admin", async (ctx) => {
 bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts[1];
-    const userId = parseInt(parts[2]);
-    const refKey = parts[3];
+    const action = parts;
+    const userId = parseInt(parts);
+    const refKey = parts;
 
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) {
@@ -118,22 +118,17 @@ bot.on("message:text", async (ctx) => {
             .text("🟢 PAID", `user_paid_${u.chosen_pay_method}`).row()
             .text("⬅️ Cancel", "back_to_menu");
         
-        // 🔹 AGAR USER NE UPI SE ADD FUND CHUNA HAI
+        // 🔹 UPI SE ADD FUND CHUNNE PAR QR AUR ID CONFIG SE UTHTI HAI
         if (u.chosen_pay_method === "pay_via_upi") {
-            const upiRaw = "upi://pay?pa=" + config.UPI_ID + "&pn=" + encodeURIComponent(config.MERCHANT_NAME);
-            const qrUrl = "https://googleapis.com" + encodeURIComponent(upiRaw);
-            
-            await ctx.replyWithPhoto(qrUrl, { 
+            await ctx.replyWithPhoto(config.UPI_QR_LINK, { 
                 caption: `🟢 *UPI MANUAL PAYMENT SYSTEM*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 *Step 1:* Is QR code par ₹${amt.toFixed(2)} pay karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
                 reply_markup: kb, 
                 parse_mode: "Markdown" 
             });
         } 
-        // 🔸 AGAR USER NE USDT SE ADD FUND CHUNA HAI
+        // 🔸 USDT SE ADD FUND CHUNNE PAR QR AUR ADDRESS CONFIG SE UTHTI HAI
         else {
-            const qrUrl = "https://googleapis.com" + encodeURIComponent(config.USDT_ADDRESS);
-            
-            await ctx.replyWithPhoto(qrUrl, { 
+            await ctx.replyWithPhoto(config.USDT_QR_LINK, { 
                 caption: `🪙 *USDT (TRC20) MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${amt.toFixed(2)}\n📍 *USDT Address:* \`${config.USDT_ADDRESS}\`\n\n👉 *Step 1:* Is address par $${amt.toFixed(2)} transfer karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
                 reply_markup: kb, 
                 parse_mode: "Markdown" 
