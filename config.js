@@ -9,9 +9,5 @@ module.exports = {
     UPI_ID: "shyamji@ybl", 
     MERCHANT_NAME: "HAPPY REACTION", 
     USDT_ADDRESS: "TYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", 
-    USD_TO_INR_RATE: 95.0,
-
-    // 🌐 RAILWAY PORT SETTING
-    PORT: process.env.PORT || 3000,
-    RAILWAY_URL: process.env.RAILWAY_PUBLIC_DOMAIN || "" // Railway public URL automatically utha lega
+    USD_TO_INR_RATE: 95.0
 };
