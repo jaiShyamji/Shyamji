@@ -25,15 +25,14 @@ bot.hears(/^\/\d+$/, o.handleSlashCode);
 bot.callbackQuery(/^q_\d+_(.+)$/, o.handleQtyButtons);
 bot.callbackQuery("main_add_funds", o.addFundsMenu);
 bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, o.initPayMethod);
+bot.callbackQuery("p_done", m.payDone);
 bot.callbackQuery("main_orders", o.ordersHistory);
 
-// 👑 ADMIN COMMAND: Services ko live dekhne ya check karne ke liye control panel
 bot.command("admin", async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
-    await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai, tumhare paas poora access hai. Koi bhi payment verification pending hogi toh yahan automatic alert aayega.`, { parse_mode: "Markdown" });
+    await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai tumhara access confirm hai. Jab koi user payment reference number bhejega, yahan direct alerts aayenge.`, { parse_mode: "Markdown" });
 });
 
-// Admin Approval Handle Callback Buttons Logic
 bot.callbackQuery(/^admin_(approve|reject)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
@@ -43,7 +42,7 @@ bot.callbackQuery(/^admin_(approve|reject)_(.+)_(.+)$/, async (ctx) => {
 
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) {
-        await ctx.answerCallbackQuery({ text: "❌ Deposit request expired or already processed!", show_alert: true });
+        await ctx.answerCallbackQuery({ text: "❌ Request expired or already verified!", show_alert: true });
         return;
     }
 
@@ -52,33 +51,25 @@ bot.callbackQuery(/^admin_(approve|reject)_(.+)_(.+)$/, async (ctx) => {
         u.balance_usd += depositData.amount_usd;
         u.total_deposit_usd += depositData.amount_usd;
         
-        await bot.api.sendMessage(userId, `✅ *Payment Approved!* 💰\n\nBhai, tumhara deposit verify ho gaya hai.\n✨ *Added:* ${m.formatMoney(depositData.amount_usd, u.currency)}\n💳 *New Balance:* ${m.formatMoney(u.balance_usd, u.currency)}`, { parse_mode: "Markdown" });
-        await ctx.editMessageText(`✅ Approved Successfully for User ${userId}`);
+        await bot.api.sendMessage(userId, `✅ *Payment Approved!* 💰\n\nBhai tumhara deposit verify ho gaya hai.\n✨ *Added:* ${m.formatMoney(depositData.amount_usd, u.currency)}\n💳 *New Balance:* ${m.formatMoney(u.balance_usd, u.currency)}`, { parse_mode: "Markdown" });
+        await ctx.editMessageText(`✅ Approved for User ${userId}`);
     } else {
-        await bot.api.sendMessage(userId, `❌ *Payment Rejected!*\n\nBhai, tumhara Ref/UTR number verify nahi ho paaya. Agar koi dikkat hai toh support par contact karo.`);
+        await bot.api.sendMessage(userId, `❌ *Payment Rejected!*\n\nBhai tumhara Ref/UTR verify nahi ho paaya. Please support panel par screenshot send karo.`);
         await ctx.editMessageText(`❌ Rejected Request for User ${userId}`);
     }
     delete m.PENDING_DEPOSITS[refKey];
 });
 
-// UTR Submission Input Trigger Button
 bot.callbackQuery(/^submit_utr_(.+)$/, async (ctx) => {
-    const serviceId = ctx.callbackQuery.data.split("_")[2];
     const u = m.getOrCreateUser(ctx.from.id);
     u.awaiting_utr = true;
-    await ctx.reply("📝 *Bhai, ab apna 12-digit UTR / Transaction Reference number yahan type karke send karo:*", { parse_mode: "Markdown" });
+    await ctx.reply("📝 *Bhai, ab apna 12-digit UTR / Reference number yahan message box mein type karke send karo:*", { parse_mode: "Markdown" });
 });
 
-bot.callbackQuery("p_done", async (ctx) => {
-    await ctx.reply("⏳ Verification workflow trigger ho gaya hai.");
-});
-
-// TEXT MESSAGES ROUTER (QR code engine aur UTR parser ke sath)
 bot.on("message:text", async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
 
-    // A. Agar User Payment ke baad UTR submit kar raha hai
     if (u.awaiting_utr) {
         u.awaiting_utr = false;
         const refKey = Date.now().toString();
@@ -86,30 +77,26 @@ bot.on("message:text", async (ctx) => {
 
         m.PENDING_DEPOSITS[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method };
 
-        // 👑 Admin (Tumhe) notification bhejega
         const adminKb = new InlineKeyboard()
             .text("✅ APPROVE", `admin_approve_${ctx.from.id}_${refKey}`)
             .text("❌ REJECT", `admin_reject_${ctx.from.id}_${refKey}`);
 
         await bot.api.sendMessage(config.ADMIN_ID, 
-            `🔔 *NEW DEPOSIT REQUEST ALERT!* 🔔\n\n` +
+            `🔔 *NEW PAYMENT SUBMISSION!* 🔔\n\n` +
             `👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n` +
             `💰 *Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n` +
-            `🛠️ *Method:* \`${u.chosen_pay_method}\`\n` +
-            `📝 *UTR/Ref Number:* \`${txt}\`\n\n` +
-            `Bhai verify karke action chuno:`, 
+            `📝 *UTR/Hash:* \`${txt}\`\n\nBhai verify karke action chuno:`, 
             { reply_markup: adminKb, parse_mode: "Markdown" }
         );
 
-        await ctx.reply(`💌 *Request Submitted!* ✅\n\nBhai tumhara Ref/UTR number \`${txt}\` verification ke liye admin ke paas bhej diya gaya hai. Kuch hi der mein balance add ho jayega!`);
+        await ctx.reply(`💌 *Request Submitted!* ✅\n\nTumhara Reference number \`${txt}\` verification ke liye admin ke paas bhej diya gaya hai. Kuch hi der mein balance add ho jayega!`);
         return;
     }
 
-    // B. Agar User Add Fund ke liye Amount daal raha hai
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) {
-            await ctx.reply("❌ Invalid amount! Please type a valid number:");
+            await ctx.reply("❌ Invalid amount! Please try again:");
             return;
         }
         
@@ -118,7 +105,7 @@ bot.on("message:text", async (ctx) => {
         const kb = new InlineKeyboard().text("📝 SUBMIT UTR / REF", `submit_utr_${u.chosen_pay_method}`).row().text("⬅️ Main Menu", "back_to_menu");
         
         if (u.chosen_pay_method === "pay_via_upi") {
-            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`;
+            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${config.MERCHANT_NAME}&am=${amt.toFixed(2)}&cu=INR`;
             const qrUrl = `https://googleapis.com{encodeURIComponent(upiRaw)}`;
             
             await ctx.replyWithPhoto(qrUrl, {
@@ -138,9 +125,19 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    // C. Normal Text Messages redirection (jaise link bhejna order lagate samay)
     await o.handleTextMessages(ctx);
 });
 
-bot.start();
-console.log("HAPPY REACTION Automated Engine with Admin Dashboard Started Live!");
+// 🚀 AUTOMATIC SESSION CLEANER (Yeh purane saare fanse hue sessions khud kill karega)
+async function startBot() {
+    try {
+        console.log("Cleaning old bot sessions...");
+        await bot.api.deleteWebhook({ drop_pending_updates: true });
+        await bot.start();
+        console.log("HAPPY REACTION Automated Engine with Admin Dashboard Started Live!");
+    } catch (err) {
+        console.error("Initialization Error:", err);
+    }
+}
+
+startBot();
