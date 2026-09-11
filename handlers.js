@@ -59,7 +59,7 @@ module.exports = {
     ytMenu: async (ctx) => { let t = `🔺 *YOUTUBE SERVICES*\n\n`; ["9001", "9002", "9003"].forEach(id => { if (SERVICES_MASTER_DATA[id]) t += `▫️ /${id} - ${SERVICES_MASTER_DATA[id].name}\n`; }); await ctx.editMessageText(t + `\n🛒 Order matching code type karein (e.g. /9001)`, { reply_markup: new InlineKeyboard().text("⬅️ Back", "main_services"), parse_mode: "Markdown" }); },
     handleSlashCode: async (ctx) => { const id = ctx.message.text.slice(1); if (!SERVICES_MASTER_DATA[id]) return; const u = getOrCreateUser(ctx.from.id); u.pending_service = id; u.awaiting_custom_qty = false; await ctx.reply(`👉 *You selected:* ${SERVICES_MASTER_DATA[id].name}\n\n🔢 *Select Your Quantity:*`, { reply_markup: getQuantityKeyboard(id), parse_mode: "Markdown" }); },
     handleQtyButtons: async (ctx) => {
-        const parts = ctx.callbackQuery.data.split("_"), serviceId = parts, qtyType = parts, u = getOrCreateUser(ctx.from.id);
+        const parts = ctx.callbackQuery.data.split("_"), serviceId = parts[1], qtyType = parts[2], u = getOrCreateUser(ctx.from.id);
         if (qtyType === "custom") { u.awaiting_custom_qty = true; await ctx.editMessageText("🔢 Please type your custom quantity amount:"); return; }
         await proceedToLinkRequest(ctx, u, serviceId, parseInt(qtyType));
     },
@@ -90,4 +90,3 @@ module.exports = {
         } catch (e) { await ctx.reply("❌ API Error."); }
         u.pending_service = null; u.pending_qty = null; u.pending_cost_usd = null;
     },
-          
