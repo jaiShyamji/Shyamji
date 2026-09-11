@@ -1,6 +1,5 @@
-require('dotenv').config();
-const { Bot, InlineKeyboard, webhookCallback } = require('grammy');
-const http = require('http');
+        require('dotenv').config();
+const { Bot, InlineKeyboard } = require('grammy');
 const config = require('./config');
 const m = require('./menuHandlers');
 const o = require('./orderHandlers');
@@ -8,7 +7,7 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
-// Saare commands aur callbacks mapping bhai
+// Commands aur callbacks routing bhai
 bot.command("start", m.start);
 bot.callbackQuery("back_to_menu", m.backMenu);
 bot.callbackQuery("check_balance", m.checkBalance);
@@ -103,7 +102,7 @@ bot.on("message:text", async (ctx) => {
         const kb = new InlineKeyboard().text("📝 SUBMIT UTR / REF", `submit_utr_${u.chosen_pay_method}`).row().text("⬅️ Main Menu", "back_to_menu");
         
         if (u.chosen_pay_method === "pay_via_upi") {
-            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`;
+            const upiRaw = `upi://pay?pa=${config.UPI_ID}&pn=${config.MERCHANT_NAME}&am=${amt.toFixed(2)}&cu=INR`;
             const qrUrl = `https://googleapis.com{encodeURIComponent(upiRaw)}`;
             await ctx.replyWithPhoto(qrUrl, { caption: `🟢 *UPI AUTOMATIC QR CODE*\n\n💵 *Amount:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\nscan karke payment karein aur neeche UTR submit karein bhai.`, reply_markup: kb, parse_mode: "Markdown" });
         } else {
@@ -116,20 +115,21 @@ bot.on("message:text", async (ctx) => {
     await o.handleTextMessages(ctx);
 });
 
-// 🌐 WEBHOOK HTTP SERVER SYSTEM FOR RAILWAY
-const server = http.createServer(webhookCallback(bot, 'http'));
-
-async function initServer() {
-    server.listen(config.PORT, async () => {
-        console.log(`Server listening on port ${config.PORT}`);
-        if (config.RAILWAY_URL) {
-            const hookUrl = `${config.RAILWAY_URL}/`;
-            await bot.api.setWebhook(hookUrl, { drop_pending_updates: true });
-            console.log(`Webhook successfully set to: ${hookUrl}`);
-        } else {
-            console.log("Waiting for domain binding...");
-        }
-    });
+// 🚀 POLLING MODE WITH SINGLE INSTANCE ENFORCER
+async function initBot() {
+    try {
+        console.log("Dropping webhook if any and dropping pending updates...");
+        await bot.api.deleteWebhook({ drop_pending_updates: true });
+        
+        // standard high speed polling active bhai
+        bot.start({
+            allowed_updates: ["message", "callback_query"],
+            drop_pending_updates: true
+        });
+        console.log("HAPPY REACTION Engine Active via Polling Engine!");
+    } catch (err) {
+        console.error("Initialization Error:", err);
+    }
 }
 
-initServer();
+initBot();
