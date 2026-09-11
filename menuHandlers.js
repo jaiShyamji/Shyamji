@@ -2,13 +2,14 @@ const { InlineKeyboard } = require('grammy');
 const config = require('./config');
 
 const USER_DATABASE = {};
+const PENDING_DEPOSITS = {}; // Admin control ke liye temporary store
 
 function getOrCreateUser(id, username = "User") {
     if (!USER_DATABASE[id]) {
         USER_DATABASE[id] = { 
             username: username || "User",
-            balance_usd: 0.0, // Starting balance bilkul 0 kar diya bhai
-            total_deposit_usd: 0.0, // Starting deposit bhi 0 rahega
+            balance_usd: 0.0, 
+            total_deposit_usd: 0.0, 
             spent_usd: 0.0, 
             orders_count: 0, 
             cancelled_orders: 0,
@@ -20,7 +21,9 @@ function getOrCreateUser(id, username = "User") {
             pending_cost_usd: null, 
             awaiting_custom_qty: false, 
             awaiting_deposit_amt: false, 
-            chosen_pay_method: null 
+            chosen_pay_method: null,
+            awaiting_utr: false,
+            current_deposit_amt: 0
         };
     }
     return USER_DATABASE[id];
@@ -34,13 +37,14 @@ function getHappyReactionKeyboard() {
     return new InlineKeyboard()
         .text("BALANCE💰", "check_balance").text("ADD FUND🏦", "main_add_funds").row()
         .text("MY CHANNEL🔗", "my_channels").text("SERVICE🚀", "main_services").row()
-        .text("MY ORDERS📥", "main_orders").text("MY PROFILE🫥", "my_profile").row()
-        .text("PROMOTION🎁", "main_promo").text("SUPPORT✅", "main_support").row()
-        .text("CURRENCY💱", "toggle_currency");
+        .text("MY ORDERS📥", "main_orders").text("MY PROFILE🎉", "my_profile").row()
+        .text("PROMOTION🎁", "main_promo").text("SUPPORT🔥", "main_support").row()
+        .text("CURRENCY", "toggle_currency");
 }
 
 module.exports = {
     USER_DATABASE,
+    PENDING_DEPOSITS,
     getOrCreateUser,
     formatMoney,
     getHappyReactionKeyboard,
@@ -50,7 +54,7 @@ module.exports = {
         await ctx.reply(`👋 Welcome to HAPPY REACTION!\n\nYour bot is ready ✅\n\nChoose an option below:`, { reply_markup: getHappyReactionKeyboard(), parse_mode: "Markdown" }); 
     },
     backMenu: async (ctx) => { 
-        const u = getOrCreateUser(ctx.from.id); u.awaiting_deposit_amt = false; 
+        const u = getOrCreateUser(ctx.from.id); u.awaiting_deposit_amt = false; u.awaiting_utr = false;
         await ctx.editMessageText(`👋 Welcome to HAPPY REACTION!\n\nYour bot is ready ✅\n\nChoose an option below:`, { reply_markup: getHappyReactionKeyboard(), parse_mode: "Markdown" }); 
     },
     checkBalance: async (ctx) => {
