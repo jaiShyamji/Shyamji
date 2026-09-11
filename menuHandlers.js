@@ -32,11 +32,11 @@ function formatMoney(usd, pref) {
 
 function getHappyReactionKeyboard() {
     return new InlineKeyboard()
-        .text("BALANCE", "check_balance").text("ADD FUND", "main_add_funds").row()
-        .text("MY CHANNEL", "my_channels").text("SERVICE", "main_services").row()
-        .text("MY ORDERS", "main_orders").text("MY PROFILE", "my_profile").row()
-        .text("PROMOTION", "main_promo").text("SUPPORT", "main_support").row()
-        .text("CURRENCY", "toggle_currency");
+        .text("BALANCE💰", "check_balance").text("ADD FUND🏦", "main_add_funds").row()
+        .text("MY CHANNEL🔗", "my_channels").text("SERVICE🚀", "main_services").row()
+        .text("MY ORDERS📥", "main_orders").text("MY PROFILE🫥", "my_profile").row()
+        .text("PROMOTION🎁", "main_promo").text("SUPPORT✅", "main_support").row()
+        .text("CURRENCY💱", "toggle_currency");
 }
 
 module.exports = {
