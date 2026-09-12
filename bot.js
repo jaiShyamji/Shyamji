@@ -8,7 +8,6 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
-// Saare interface commands aur callbacks mapping bhai
 bot.command("start", m.start);
 bot.callbackQuery("back_to_menu", m.backMenu);
 bot.callbackQuery("check_balance", m.checkBalance);
@@ -26,7 +25,6 @@ bot.hears(/^\/\d+$/, o.handleSlashCode);
 bot.callbackQuery(/^q_\d+_(.+)$/, o.handleQtyButtons);
 bot.callbackQuery("main_orders", o.ordersHistory);
 
-// 👑 ADMIN DASHBOARD CONTROL PANEL
 bot.command("admin", async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     await ctx.reply(`⚙️ *HAPPY REACTION Admin panel active!*`, { parse_mode: "Markdown" });
@@ -35,7 +33,7 @@ bot.command("admin", async (ctx) => {
 bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts[1], userId = parseInt(parts[2]), refKey = parts[3];
+    const action = parts, userId = parseInt(parts), refKey = parts;
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
 
@@ -60,7 +58,7 @@ bot.callbackQuery("main_add_funds", async (ctx) => {
 bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id); u.chosen_pay_method = ctx.callbackQuery.data; u.awaiting_deposit_amt = true;
     if (u.chosen_pay_method === "pay_via_upi") {
-        await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\nकृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`);
+        await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\n¼कृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`);
     } else {
         await ctx.editMessageText(`💰 *Enter Amount:* USDT\n\nकृपया वह राशि (USDT) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (USDT) you want to add:`);
     }
@@ -73,10 +71,10 @@ bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
 });
 
 bot.callbackQuery(/^usdtnet_(bep20|trc20)$/, async (ctx) => {
-    const u = m.getOrCreateUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_")[1]; u.chosen_network = network;
+    const u = m.getOrCreateUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_"); u.chosen_network = network;
     const address = network === "trc20" ? config.USDT_TRC20 : config.USDT_BEP20;
     const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "pay_via_usdt");
-    await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`${address}\`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click kabhein.`, { reply_markup: kb, parse_mode: "Markdown" });
+    await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`${address}\`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
 });
 
 bot.callbackQuery("usdt_confirm_click", async (ctx) => {
@@ -100,15 +98,15 @@ bot.on("message:text", async (ctx) => {
         const amt = parseFloat(txt); if (isNaN(amt) || amt <= 0) return ctx.reply("❌ Invalid amount! Try again:");
         u.awaiting_deposit_amt = false; u.current_deposit_amt = amt;
         if (u.chosen_pay_method === "pay_via_upi") {
-            const upiString = `upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`;
+            // UPI Application Buttons fixed without link crashing bhai
             const appsKb = new InlineKeyboard()
-                .url("Google pay", `gpay://upi/pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`)
-                .url("PAYTM", `https://paytm.me{encodeURIComponent(upiString)}`).row()
-                .url("PHONE PAY", `phonepe://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`)
+                .text("Google pay", "user_complete_pay_via_upi")
+                .text("PAYTM", "user_complete_pay_via_upi").row()
+                .text("PHONE PAY", "user_complete_pay_via_upi")
                 .text("UPI", "user_complete_pay_via_upi").row()
                 .text("OTHER PAYMENT METHOD", "user_complete_pay_via_upi").row()
                 .text("PAYMENT COMPLETE", "user_complete_pay_via_upi");
-            await ctx.reply(`💳 *Select your payment method:*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 App select karke pay karein aur uske baad *PAYMENT COMPLETE* par click karein bhai.`, { reply_markup: appsKb, parse_mode: "Markdown" });
+            await ctx.reply(`💳 *Select your payment method:*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\` _(Tap to copy)_\n\n👉 *Instructions:* Upar di gayi UPI ID par ₹${amt.toFixed(2)} transfer karein aur uske baad neeche diye gaye *PAYMENT COMPLETE* button par click karein bhai.`, { reply_markup: appsKb, parse_mode: "Markdown" });
         } else {
             const netKb = new InlineKeyboard().text("BEP20", "usdtnet_bep20").text("TRC20", "usdtnet_trc20");
             await ctx.reply(`आप अपना USDT नेटवर्क सेलेक्ट करें:\n\n💵 *Amount:* $${amt.toFixed(2)}`, { reply_markup: netKb, parse_mode: "Markdown" });
