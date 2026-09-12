@@ -9,6 +9,7 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
+// Saare basic menus aur callback routings link ho gaye bhai
 bot.command("start", m.start);
 bot.callbackQuery("back_to_menu", m.backMenu);
 bot.callbackQuery("check_balance", m.checkBalance);
@@ -29,17 +30,19 @@ bot.callbackQuery("main_add_funds", o.addFundsMenu);
 bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, o.initPayMethod);
 bot.callbackQuery("main_orders", o.ordersHistory);
 
+// 👑 ADMIN COMMAND PANEL
 bot.command("admin", async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
-    await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai tumhara admin access active hai!`, { parse_mode: "Markdown" });
+    await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel*\n\nBhai tumhara admin access active hai! Control grid ready hai.`, { parse_mode: "Markdown" });
 });
 
-bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
+// 👑 ADMIN ACTIONS: ACCEPT / CANCEL DECISION PANEL LOGIC
+bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts[1];
-    const userId = parseInt(parts[2]);
-    const refKey = parts[3];
+    const action = parts;
+    const userId = parseInt(parts);
+    const refKey = parts;
 
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) {
@@ -48,31 +51,46 @@ bot.callbackQuery(/^adm_(app|rej)_(.+)_(.+)$/, async (ctx) => {
     }
 
     const u = m.getOrCreateUser(userId);
-    if (action === "app") {
+    if (action === "acc") {
         u.balance_usd += depositData.amount_usd;
         u.total_deposit_usd += depositData.amount_usd;
         
         const successMsg = `✅ *Payment Added Successful!* 💰\n\nBhai tumhara payment verify ho gaya hai.\n✨ *Added Amount:* ${m.formatMoney(depositData.amount_usd, u.currency)}\n💳 *Total Balance:* ${m.formatMoney(u.balance_usd, u.currency)}`;
         
         await bot.api.sendMessage(userId, successMsg, { parse_mode: "Markdown" });
-        await ctx.editMessageText(`✅ Approved Successfully for User ${userId}`);
+        await ctx.editMessageText(`✅ Request Accepted Successfully for User ${userId}`);
     } else {
-        await bot.api.sendMessage(userId, `❌ *Payment Rejected!*\n\nBhai tumhara Ref/UTR verify nahi ho paaya. Please support panel par sahi screenshot send karo.`);
-        await ctx.editMessageText(`❌ Rejected Request for User ${userId}`);
+        await bot.api.sendMessage(userId, `❌ *Payment Request Cancelled!*\n\nBhai tumhara deposit request admin dwara cancel kar diya gaya hai. Agar koi dikkat hai toh support par contact karo.`);
+        await ctx.editMessageText(`❌ Request Cancelled for User ${userId}`);
     }
     delete m.PENDING_DEPOSITS[refKey];
 });
 
-bot.callbackQuery(/^submit_utr_(.+)$/, async (ctx) => {
+// User jab payment karne ke baad "PAYMENT COMPLETE" button dabaaye
+bot.callbackQuery(/^user_complete_pay_(via_upi|via_usdt)$/, async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id);
     u.awaiting_utr = true;
-    await ctx.reply("📝 *Bhai, ab apna 12-digit UTR / Reference number niche message box mein type karke send karo:*", { parse_mode: "Markdown" });
+    const orderNum = Math.floor(100000 + Math.random() * 900000);
+    u.current_order_num = orderNum;
+    
+    const targetAmt = u.chosen_pay_method === "pay_via_upi" ? `₹${u.current_deposit_amt.toFixed(2)}` : `$${u.current_deposit_amt.toFixed(2)}`;
+    
+    await ctx.editMessageText(
+        `💵 *Payment Initiated!* ✅\n\n` +
+        `📊 *Amount:* \`${targetAmt}\`\n` +
+        `🆔 *Order Number:* \`#${orderNum}\`\n\n` +
+        `⚠️ *SUBMIT UTR REFERENCE NUMBER AND SCREENSHOT:*\n` +
+        `Bhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, 
+        { parse_mode: "Markdown" }
+    );
 });
 
+// ⚡ LIVE TEXT INPUT RECEIVER
 bot.on("message:text", async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
 
+    // A. UTR Submission logic
     if (u.awaiting_utr) {
         u.awaiting_utr = false;
         const refKey = Date.now().toString();
@@ -81,22 +99,24 @@ bot.on("message:text", async (ctx) => {
         m.PENDING_DEPOSITS[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method };
 
         const adminKb = new InlineKeyboard()
-            .text("✅ APPROVE", `adm_app_${ctx.from.id}_${refKey}`)
-            .text("❌ REJECT", `adm_rej_${ctx.from.id}_${refKey}`);
+            .text("✅ ACCEPT", `adm_acc_${ctx.from.id}_${refKey}`)
+            .text("❌ CANCEL", `adm_can_${ctx.from.id}_${refKey}`);
 
         await bot.api.sendMessage(config.ADMIN_ID, 
-            `🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n` +
+            `🔔 *NEW DEPOSIT REQUEST RECEIVED!* 🔔\n\n` +
             `👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n` +
+            `🆔 *Order Number:* \`#${u.current_order_num}\`\n` +
             `💰 *Expected Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n` +
             `🛠️ *Method:* \`${u.chosen_pay_method === "pay_via_upi" ? "UPI" : "USDT"}\`\n` +
-            `📝 *Submitted UTR/Hash:* \`${txt}\`\n\nBhai verify karke action chuno:`, 
+            `📝 *Submitted UTR/Hash:* \`${txt}\`\n\nBhai check karke apna decision le lo:`, 
             { reply_markup: adminKb, parse_mode: "Markdown" }
         );
 
-        await ctx.reply(`💌 *Request Submitted!* ✅\n\nBhai tumhara Ref/UTR number \`${txt}\` verification ke liye admin ke paas bhej diya gaya hai. Check hone ke baad balance add ho jayega!`);
+        await ctx.reply(`💌 *Details Received!* ✅\n\nTumhara Reference number \`${txt}\` aur order details admin ke paas approval ke liye bhej di gayi hain. Check hone ke baad balance add ho jayega!`);
         return;
     }
 
+    // B. Add Fund Amount input handler
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) {
@@ -108,21 +128,28 @@ bot.on("message:text", async (ctx) => {
         u.current_deposit_amt = amt;
         
         const kb = new InlineKeyboard()
-            .text("🟢 PAID", `user_paid_${u.chosen_pay_method}`).row()
-            .text("⬅️ Cancel", "back_to_menu");
+            .text("PAYMENT COMPLETE", `user_complete_pay_${u.chosen_pay_method}`).row()
+            .text("BACK", "main_add_funds");
         
+        // 🟢 AGAR UPI SELECT KIYA HAI (QR removed, sirf text details)
         if (u.chosen_pay_method === "pay_via_upi") {
-            await ctx.replyWithPhoto(config.UPI_QR_LINK, { 
-                caption: `🟢 *UPI MANUAL PAYMENT SYSTEM*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 *Step 1:* Is QR code par ₹${amt.toFixed(2)} pay karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
-                reply_markup: kb, 
-                parse_mode: "Markdown" 
-            });
-        } else {
-            await ctx.replyWithPhoto(config.USDT_QR_LINK, { 
-                caption: `🪙 *USDT (TRC20) MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${amt.toFixed(2)}\n📍 *USDT Address:* \`${config.USDT_ADDRESS}\`\n\n👉 *Step 1:* Is address par $${amt.toFixed(2)} transfer karein.\n👉 *Step 2:* Pay karne ke baad neeche diye gaye *PAID* button par click karein.`, 
-                reply_markup: kb, 
-                parse_mode: "Markdown" 
-            });
+            await ctx.reply(
+                `🟢 *UPI MANUAL PAYMENT SYSTEM*\n\n` +
+                `💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n` +
+                `📍 *UPI ID:* \`${config.UPI_ID}\`\n\n` +
+                `👉 *Instructions:* Diye gaye UPI ID par ₹${amt.toFixed(2)} transfer karein aur uske baad neeche diye gaye *PAYMENT COMPLETE* button par click karein.`, 
+                { reply_markup: kb, parse_mode: "Markdown" }
+            );
+        } 
+        // 🪙 AGAR USDT SELECT KIYA HAI (QR removed, sirf text details)
+        else {
+            await ctx.reply(
+                `🪙 *USDT MANUAL CONFIGURATION*\n\n` +
+                `💵 *Amount to Pay:* $${amt.toFixed(2)}\n` +
+                `📍 *USDT Address:* \`${config.USDT_ADDRESS}\`\n\n` +
+                `👉 *Instructions:* Diye gaye TRC20 address par $${amt.toFixed(2)} send karein aur uske baad neeche diye gaye *PAYMENT COMPLETE* button par click karein.`, 
+                { reply_markup: kb, parse_mode: "Markdown" }
+            );
         }
         return;
     }
@@ -143,3 +170,4 @@ async function startBotEngine() {
 }
 
 startBotEngine();
+
