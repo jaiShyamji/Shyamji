@@ -4,7 +4,7 @@ const { run } = require('@grammyjs/runner');
 const config = require('./config');
 const m = require('./menuHandlers');
 const o = require('./orderHandlers');
-const p = require('./paymentEngine'); // Naya super engine linked bhai
+const p = require('./paymentHandlers'); // Wapas purana naam link kar diya bhai
 
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
