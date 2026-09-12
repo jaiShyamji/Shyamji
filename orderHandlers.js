@@ -110,4 +110,5 @@ module.exports = {
         u.pending_service = null; u.pending_qty = null; u.pending_cost_usd = null;
     },
     payDone: async (ctx) => { await ctx.reply(`💌 *Registered!* Send screenshot to @${config.SUPPORT_USERNAME}`); }
+    reloadServices: () => { delete require.cache[require.resolve('./services')]; }
 };
