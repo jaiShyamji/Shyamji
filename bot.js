@@ -40,13 +40,13 @@ bot.command("admin", async (ctx) => {
 bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts;
-    const userId = parseInt(parts);
-    const refKey = parts;
+    const action = parts[1];
+    const userId = parseInt(parts[2]);
+    const refKey = parts[3];
 
     const depositData = m.PENDING_DEPOSITS[refKey];
     if (!depositData) {
-        await ctx.answerCallbackQuery({ text: "❌ Request expired or already verified!", show_alert: true });
+        await ctx.answerCallbackQuery({ text: "❌ Request expired or already processed!", show_alert: true });
         return;
     }
 
@@ -66,8 +66,8 @@ bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     delete m.PENDING_DEPOSITS[refKey];
 });
 
-// User jab payment karne ke baad "PAYMENT COMPLETE" button dabaaye
-bot.callbackQuery(/^user_complete_pay_(via_upi|via_usdt)$/, async (ctx) => {
+// 💳 USER NE JAB "PAYMENT COMPLETE" BUTTON DABAAYA (Regex and String split sequence fixed properly yahan)
+bot.callbackQuery(/^user_complete_pay_(.+)$/, async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id);
     u.awaiting_utr = true;
     const orderNum = Math.floor(100000 + Math.random() * 900000);
@@ -131,7 +131,7 @@ bot.on("message:text", async (ctx) => {
             .text("PAYMENT COMPLETE", `user_complete_pay_${u.chosen_pay_method}`).row()
             .text("BACK", "main_add_funds");
         
-        // 🟢 AGAR UPI SELECT KIYA HAI (QR removed, sirf text details)
+        // AGAR UPI SELECT KIYA HAI
         if (u.chosen_pay_method === "pay_via_upi") {
             await ctx.reply(
                 `🟢 *UPI MANUAL PAYMENT SYSTEM*\n\n` +
@@ -141,7 +141,7 @@ bot.on("message:text", async (ctx) => {
                 { reply_markup: kb, parse_mode: "Markdown" }
             );
         } 
-        // 🪙 AGAR USDT SELECT KIYA HAI (QR removed, sirf text details)
+        // AGAR USDT SELECT KIYA HAI
         else {
             await ctx.reply(
                 `🪙 *USDT MANUAL CONFIGURATION*\n\n` +
@@ -170,4 +170,3 @@ async function startBotEngine() {
 }
 
 startBotEngine();
-
