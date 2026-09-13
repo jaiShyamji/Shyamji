@@ -10,7 +10,6 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
-// Dynamic Memory block ek hi file mein lock kar diya bhai taaki sync data leak na ho
 const LOCAL_DEPOSITS = {};
 
 bot.command("start", m.start);
@@ -41,7 +40,7 @@ bot.command("admin", async (ctx) => {
 bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts, userId = parseInt(parts), refKey = parts;
+    const action = parts[1], userId = parseInt(parts[2]), refKey = parts[3];
 
     const depositData = LOCAL_DEPOSITS[refKey];
     if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
@@ -69,7 +68,7 @@ bot.callbackQuery("main_add_funds", async (ctx) => {
 bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id);
     u.chosen_pay_method = ctx.callbackQuery.data;
-    u.awaiting_deposit_amt = true; // State local memory block set bhai
+    u.awaiting_deposit_amt = true;
     
     if (u.chosen_pay_method === "pay_via_upi") {
         await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\nकृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`);
@@ -78,16 +77,14 @@ bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
     }
 });
 
-// User jab UPI payment karne ke baad "PAYMENT COMPLETE" par click kare
 bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id); u.awaiting_utr = true;
     const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
     await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#${orderNum}\`\n\n⚠️ *SUBMIT UTR TRANSACTION ID:*\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
 });
 
-// User jab USDT chune ke baad network filter select kare (BEP20 / TRC20)
 bot.callbackQuery(/^usdtnet_(bep20|trc20)$/, async (ctx) => {
-    const u = m.getOrCreateUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_"); u.chosen_network = network;
+    const u = m.getOrCreateUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_")[1]; u.chosen_network = network;
     const address = network === "trc20" ? config.USDT_TRC20 : config.USDT_BEP20;
     const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "pay_via_usdt");
     await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`${address}\`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
@@ -99,26 +96,12 @@ bot.callbackQuery("usdt_confirm_click", async (ctx) => {
     await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`$${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`${u.chosen_network.toUpperCase()}\`\n\n⚠️ *SUBMIT TRANSACTION ID:*\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
 });
 
-// ⚡ CORE TEXT INPUT RECEIVER (Variables are 100% synced inside the same root block)
+// ⚡ CORE TEXT INPUT RECEIVER (Payment logic placed on highest priority)
 bot.on("message:text", async (ctx) => {
     const u = m.getOrCreateUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
 
-    // A. Handle manual ID/UTR verification submissions
-    if (u.awaiting_utr) {
-        u.awaiting_utr = false; const refKey = Date.now().toString();
-        const amtUsd = u.chosen_pay_method === "pay_via_upi" ? (u.current_deposit_amt / config.USD_TO_INR_RATE) : u.current_deposit_amt;
-        LOCAL_DEPOSITS[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method };
-
-        const adminKb = new InlineKeyboard().text("✅ ACCEPT", `adm_acc_${ctx.from.id}_${refKey}`).text("❌ CANCEL", `adm_can_${ctx.from.id}_${refKey}`);
-        let alertMsg = `🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n🆔 *Order Number:* \`#${u.current_order_num}\`\n💰 *Expected Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n🛠️ *Method:* \`${u.chosen_pay_method === "pay_via_upi" ? "UPI" : "USDT (" + u.chosen_network.toUpperCase() + ")"}\`\n📝 *ID/UTR:* \`${txt}\``;
-        
-        await bot.api.sendMessage(config.ADMIN_ID, alertMsg, { reply_markup: adminKb, parse_mode: "Markdown" });
-        await ctx.reply(`💌 *Details Received!* ✅\n\nTumhara Reference/Transaction ID \`${txt}\` verification ke liye admin ke paas bhej diya gaya hai!`);
-        return;
-    }
-
-    // B. Handle Amount inputs (UPI or USDT routing)
+    // 1. Agar user amount daal raha hai
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) return ctx.reply("❌ Invalid amount! Try again:");
@@ -145,6 +128,21 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
+    // 2. Agar user UTR/Transaction Hash ID send kar raha hai
+    if (u.awaiting_utr) {
+        u.awaiting_utr = false; const refKey = Date.now().toString();
+        const amtUsd = u.chosen_pay_method === "pay_via_upi" ? (u.current_deposit_amt / config.USD_TO_INR_RATE) : u.current_deposit_amt;
+        LOCAL_DEPOSITS[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method };
+
+        const adminKb = new InlineKeyboard().text("✅ ACCEPT", `adm_acc_${ctx.from.id}_${refKey}`).text("❌ CANCEL", `adm_can_${ctx.from.id}_${refKey}`);
+        let alertMsg = `🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n🆔 *Order Number:* \`#${u.current_order_num}\`\n💰 *Expected Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n🛠️ *Method:* \`${u.chosen_pay_method === "pay_via_upi" ? "UPI" : "USDT (" + u.chosen_network.toUpperCase() + ")"}\`\n📝 *ID/UTR:* \`${txt}\``;
+        
+        await bot.api.sendMessage(config.ADMIN_ID, alertMsg, { reply_markup: adminKb, parse_mode: "Markdown" });
+        await ctx.reply(`💌 *Details Received!* ✅\n\nTumhara Reference/Transaction ID \`${txt}\` verification ke liye admin ke paas bhej diya gaya hai!`);
+        return;
+    }
+
+    // 3. Agar koi normal service message ya link hai toh baki functions par bhejein
     await o.handleTextMessages(ctx);
 });
 
