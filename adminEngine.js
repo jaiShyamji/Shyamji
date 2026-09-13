@@ -1,9 +1,7 @@
 const { InlineKeyboard } = require('grammy');
 const config = require('./config');
-const m = require('./menuHandlers');
 const o = require('./orderHandlers');
 const core = require('./bot'); 
-let SERVICES_MASTER_DATA = require('./services');
 
 module.exports = (bot) => {
     bot.command("start", async (ctx) => {
@@ -76,30 +74,4 @@ module.exports = (bot) => {
             await bot.api.sendMessage(userId, `❌ *Payment Request Cancelled!*`); await ctx.editMessageText(`❌ Cancelled for User ${userId}`);
         } delete core.SHARED_DEPOSITS_MAP[refKey];
     });
-
-    bot.command("admin", async (ctx) => {
-        if (ctx.from.id !== config.ADMIN_ID) return;
-        await ctx.reply(`⚙️ *HAPPY REACTION Super Admin Control Panel*\n\n➕ *Services Control:* \n▫️ \`/addservice ID Rate Type Name\`\n▫️ \`/updateservice ID NewRate\`\n▫️ \`/delservice ID\`\n\n🛡️ *Security Control:* \n▫️ \`/ban USER_ID\` \n▫️ \`/unban USER_ID\` \n\n💰 *Balance Control:* \n▫️ \`/addbalance USER_ID AMOUNT\` \n▫️ \`/deductbalance USER_ID AMOUNT\` \n▫️ \`/checkuser USER_ID\``, { parse_mode: "Markdown" });
-    });
-
-    bot.command("ban", async (ctx) => {
-        if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ User nahi mila!");
-        core.DYNAMIC_USER_DB[target].is_banned = true; core.forceSaveDatabase(); await ctx.reply(`🚫 *User ${target} ko BAN kar diya gaya hai!*`);
-    });
-
-    bot.command("unban", async (ctx) => {
-        if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ User nahi mila!");
-        core.DYNAMIC_USER_DB[target].is_banned = false; core.forceSaveDatabase(); await ctx.reply(`✅ *User ${target} ko UNBAN kar diya gaya hai!*`);
-    });
-
-    bot.command("addbalance", async (ctx) => {
-        if (ctx.from.id !== config.ADMIN_ID) return;
-        const args = ctx.message.text.split(" "); const target = args[1], amt = parseFloat(args[2]);
-        if (!target || isNaN(amt) || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ Format Error!");
-        core.DYNAMIC_USER_DB[target].balance_usd += amt; core.forceSaveDatabase(); await ctx.reply(`💰 Added $${amt} to ${target}.`);
-        await bot.api.sendMessage(target, `✨ *Admin dwara tumhare account mein $${amt} add kar diye gaye hain!*`);
-    });
-
-    bot.command("deductbalance", async (ctx) => {
+};
