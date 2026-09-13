@@ -18,10 +18,11 @@ module.exports = (bot) => {
 
     bot.callbackQuery("check_balance", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); await ctx.editMessageText(`💰 *Your Balance Details:*\n\n💵 *Current Balance:* ${core.formatMoneyLocal(u.balance_usd, u.currency)}\n💳 *Total Deposited:* ${core.formatMoneyLocal(u.total_deposit_usd, u.currency)}`, { reply_markup: new InlineKeyboard().text("⬅️ Back to Menu", "back_to_menu"), parse_mode: "Markdown" });
-    },
+    });
+
     bot.callbackQuery("my_profile", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); await ctx.editMessageText(`👤 *USER PROFILE DETAILS:*\n\n📝 *Name:* ${u.username}\n🆔 *User ID:* \`${ctx.from.id}\`\n\n💳 *Current Balance:* ${core.formatMoneyLocal(u.balance_usd, u.currency)}\n💰 *Total Deposited:* ${core.formatMoneyLocal(u.total_deposit_usd, u.currency)}\n💸 *Total Spent:* ${core.formatMoneyLocal(u.spent_usd, u.currency)}\n\n📦 *Total Orders:* ${u.orders_count}\n⏳ *Pending Orders:* ${u.pending_orders}\n❌ *Cancelled Orders:* ${u.cancelled_orders}`, { reply_markup: new InlineKeyboard().text("⬅️ Back to Menu", "back_to_menu"), parse_mode: "Markdown" });
-    }));
+    });
 
     bot.callbackQuery("main_orders", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); let txt = `📦 *YOUR ORDERS STATUS & HISTORY:*\n\n📊 *Total Orders:* ${u.orders_count}\n⏳ *Pending Orders:* ${u.pending_orders}\n\n*Last 5 Orders:* \n`;
@@ -42,7 +43,7 @@ module.exports = (bot) => {
     bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.chosen_pay_method = ctx.callbackQuery.data; u.awaiting_deposit_amt = true;
         if (u.chosen_pay_method === "pay_via_upi") { await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\nकृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`); }
-        else { await ctx.editMessageText(`💰 *Enter Amount:* USDT\n\nकृपया वह राशि (USDT) typ करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (USDT) you want to add:`); }
+        else { await ctx.editMessageText(`💰 *Enter Amount:* USDT\n\nकृपया वह राशि (USDT) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (USDT) you want to add:`); }
     });
 
     bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
@@ -65,9 +66,7 @@ module.exports = (bot) => {
     bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const parts = ctx.callbackQuery.data.split("_"), action = parts, userId = parseInt(parts), refKey = parts;
-        const depositData = core.SHARED_DEPOSITS_MAP[refKey]; 
-        if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
-
+        const depositData = core.SHARED_DEPOSITS_MAP[refKey]; if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
         const u = core.getLocalUser(userId);
         if (action === "acc") {
             u.balance_usd += depositData.amount_usd; u.total_deposit_usd += depositData.amount_usd; core.forceSaveDatabase();
@@ -78,10 +77,10 @@ module.exports = (bot) => {
         } delete core.SHARED_DEPOSITS_MAP[refKey];
     });
 
-    // 👑 SUPER ADMIN TEXT COMMANDS ROUTING
+    // Admin Commands
     bot.command("admin", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        await ctx.reply(`⚙ *HAPPY REACTION Super Admin Control Panel*\n\n➕ *Services Control:* \n▫️ \`/addservice ID Rate Type Name\`\n▫️ \`/updateservice ID NewRate\`\n▫️ \`/delservice ID\`\n\n🛡️ *Security Control:* \n▫️ \`/ban USER_ID\` \n▫️ \`/unban USER_ID\` \n\n💰 *Balance Control:* \n▫️ \`/addbalance USER_ID AMOUNT\` \n▫️ \`/deductbalance USER_ID AMOUNT\` \n▫️ \`/checkuser USER_ID\``, { parse_mode: "Markdown" });
+        await ctx.reply(`⚙️ *HAPPY REACTION Super Admin Control Panel*\n\n➕ *Services Control:* \n▫️ \`/addservice ID Rate Type Name\`\n▫️ \`/updateservice ID NewRate\`\n▫️ \`/delservice ID\`\n\n🛡️ *Security Control:* \n▫️ \`/ban USER_ID\` \n▫️ \`/unban USER_ID\` \n\n💰 *Balance Control:* \n▫️ \`/addbalance USER_ID AMOUNT\` \n▫️ \`/deductbalance USER_ID AMOUNT\` \n▫️ \`/checkuser USER_ID\``, { parse_mode: "Markdown" });
     });
 
     bot.command("ban", async (ctx) => {
