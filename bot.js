@@ -50,7 +50,7 @@ bot.command("admin", async (ctx) => {
 bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts, userId = parseInt(parts), refKey = parts;
+    const action = parts[1], userId = parseInt(parts[2]), refKey = parts[3];
 
     const depositData = LOCAL_DEPOSITS[refKey];
     if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
@@ -90,13 +90,16 @@ bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
 bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
     const u = getLocalUser(ctx.from.id); u.awaiting_utr = true;
     const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
-    await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#${orderNum}\`\n\n⚠️ *SUBMIT UTR TRANSACTION ID:*\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
+    await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#${orderNum}\`\n\n**⚠️ SUBMIT UTR TRANSACTION ID:**\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
 });
 
-// User jab USDT chune ke baad network filter select kare (BEP20 / TRC20)
+// 🪙 USDT NETWORK SELECTION FLOW FIXED (Is dynamic filter se hi pehle chal raha tha)
 bot.callbackQuery(/^usdtnet_(bep20|trc20)$/, async (ctx) => {
-    const u = getLocalUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_"); u.chosen_network = network;
+    const u = getLocalUser(ctx.from.id); 
+    const network = ctx.callbackQuery.data.split("_")[1]; 
+    u.chosen_network = network;
     const address = network === "trc20" ? config.USDT_TRC20 : config.USDT_BEP20;
+    
     const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "pay_via_usdt");
     await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`${address}\`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
 });
@@ -104,15 +107,13 @@ bot.callbackQuery(/^usdtnet_(bep20|trc20)$/, async (ctx) => {
 bot.callbackQuery("usdt_confirm_click", async (ctx) => {
     const u = getLocalUser(ctx.from.id); u.awaiting_utr = true;
     const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
-    await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`$${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`${u.chosen_network.toUpperCase()}\`\n\n⚠️ *SUBMIT TRANSACTION ID:*\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
+    await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`$${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`${u.chosen_network.toUpperCase()}\`\n\n**⚠️ SUBMIT TRANSACTION ID:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
 });
 
-// ⚡ CORE TEXT INPUT RECEIVER (Clean Textile Manual Flow)
 bot.on("message:text", async (ctx) => {
     const u = getLocalUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
 
-    // 1. Handle Amount inputs (UPI or USDT routing)
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) return ctx.reply("❌ Invalid amount! Try again:");
@@ -121,20 +122,16 @@ bot.on("message:text", async (ctx) => {
         u.current_deposit_amt = amt;
         
         if (u.chosen_pay_method === "pay_via_upi") {
-            // Tumhaare bataye anusar pure text layout with CONFIRM PAYMENT and BACK button
-            const upiKb = new InlineKeyboard()
-                .text("CONFIRM PAYMENT", "user_complete_pay_via_upi").row()
-                .text("BACK", "main_add_funds");
-
+            const upiKb = new InlineKeyboard().text("CONFIRM PAYMENT", "user_complete_pay_via_upi").row().text("BACK", "main_add_funds");
             await ctx.reply(`🟢 *UPI MANUAL PAYMENT SYSTEM*\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\` _(Tap to copy)_\n\n👉 *Instructions:* Diye gaye UPI ID par exactly ₹${amt.toFixed(2)} transfer karein aur uske baad neeche diye gaye *CONFIRM PAYMENT* button par click karein bhai.`, { reply_markup: upiKb, parse_mode: "Markdown" });
         } else {
+            // USDT Network routing exact map kar di hai bhai bina break hue
             const netKb = new InlineKeyboard().text("BEP20", "usdtnet_bep20").text("TRC20", "usdtnet_trc20");
             await ctx.reply(`आप अपना USDT नेटवर्क सेलेक्ट करें:\n\n💵 *Amount:* $${amt.toFixed(2)}`, { reply_markup: netKb, parse_mode: "Markdown" });
         }
         return;
     }
 
-    // 2. Handle manual ID/UTR verification submissions
     if (u.awaiting_utr) {
         u.awaiting_utr = false; const refKey = Date.now().toString();
         const amtUsd = u.chosen_pay_method === "pay_via_upi" ? (u.current_deposit_amt / config.USD_TO_INR_RATE) : u.current_deposit_amt;
