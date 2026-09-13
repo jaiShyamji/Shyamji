@@ -10,7 +10,20 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
+// 👑 Dynamic Database Linkage yahan par fix kar di hai bhai
+const DYNAMIC_USER_DB = {};
 const LOCAL_DEPOSITS = {};
+
+function getLocalUser(id, name = "User") {
+    if (!DYNAMIC_USER_DB[id]) {
+        DYNAMIC_USER_DB[id] = { username: name, balance_usd: 0.0, total_deposit_usd: 0.0, spent_usd: 0.0, orders_count: 0, cancelled_orders: 0, pending_orders: 0, history: [], currency: "INR", pending_service: null, pending_qty: null, pending_cost_usd: null, awaiting_custom_qty: false, awaiting_deposit_amt: false, chosen_pay_method: null, awaiting_utr: false, current_deposit_amt: 0, current_order_num: 0, chosen_network: "" };
+    }
+    return DYNAMIC_USER_DB[id];
+}
+
+function formatMoneyLocal(usd, pref) {
+    return pref === "INR" ? `₹${(usd * config.USD_TO_INR_RATE).toFixed(2)}` : `$${usd.toFixed(2)}`;
+}
 
 bot.command("start", m.start);
 bot.callbackQuery("back_to_menu", m.backMenu);
@@ -30,26 +43,24 @@ bot.hears(/^\/\d+$/, o.handleSlashCode);
 bot.callbackQuery(/^q_\d+_(.+)$/, o.handleQtyButtons);
 bot.callbackQuery("main_orders", o.ordersHistory);
 
-// 👑 ADMIN COMMAND PANEL
 bot.command("admin", async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     await ctx.reply(`⚙️ *HAPPY REACTION Admin Control Panel Active!*`, { parse_mode: "Markdown" });
 });
 
-// 👑 ADMIN APPROVAL ACTION HANDLERS
 bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_");
-    const action = parts[1], userId = parseInt(parts[2]), refKey = parts[3];
+    const action = parts, userId = parseInt(parts), refKey = parts;
 
     const depositData = LOCAL_DEPOSITS[refKey];
     if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
 
-    const u = m.getOrCreateUser(userId);
+    const u = getLocalUser(userId);
     if (action === "acc") {
         u.balance_usd += depositData.amount_usd;
         u.total_deposit_usd += depositData.amount_usd;
-        const successMsg = `✅ *Payment Added Successful!* 💰\n\nBhai tumhara payment verify ho gaya hai.\n✨ *Added Amount:* ${m.formatMoney(depositData.amount_usd, u.currency)}\n💳 *Total Balance:* ${m.formatMoney(u.balance_usd, u.currency)}`;
+        const successMsg = `✅ *Payment Added Successful!* 💰\n\nBhai tumhara payment verify ho gaya hai.\n✨ *Added Amount:* ${formatMoneyLocal(depositData.amount_usd, u.currency)}\n💳 *Total Balance:* ${formatMoneyLocal(u.balance_usd, u.currency)}`;
         await bot.api.sendMessage(userId, successMsg, { parse_mode: "Markdown" });
         await ctx.editMessageText(`✅ Request Accepted for User ${userId}`);
     } else {
@@ -59,14 +70,13 @@ bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     delete LOCAL_DEPOSITS[refKey];
 });
 
-// 💳 ADD FUND SELECTION SYSTEM
 bot.callbackQuery("main_add_funds", async (ctx) => {
     const kb = new InlineKeyboard().text("Payment via UPI", "pay_via_upi").text("Payment via USDT", "pay_via_usdt").row().text("BACK", "back_to_menu");
     await ctx.editMessageText("💳 *Select Payment Method / पेमेंट का तरीका चुनें:*", { reply_markup: kb, parse_mode: "Markdown" });
 });
 
 bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
-    const u = m.getOrCreateUser(ctx.from.id);
+    const u = getLocalUser(ctx.from.id);
     u.chosen_pay_method = ctx.callbackQuery.data;
     u.awaiting_deposit_amt = true;
     
@@ -78,30 +88,30 @@ bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
 });
 
 bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
-    const u = m.getOrCreateUser(ctx.from.id); u.awaiting_utr = true;
+    const u = getLocalUser(ctx.from.id); u.awaiting_utr = true;
     const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
-    await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#${orderNum}\`\n\n⚠️ *SUBMIT UTR TRANSACTION ID:*\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
+    await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#${orderNum}\`\n\n⚠️ *SUBMIT UTR TRANSACTION ID:*\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke behavi:`, { parse_mode: "Markdown" });
 });
 
 bot.callbackQuery(/^usdtnet_(bep20|trc20)$/, async (ctx) => {
-    const u = m.getOrCreateUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_")[1]; u.chosen_network = network;
+    const u = getLocalUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_"); u.chosen_network = network;
     const address = network === "trc20" ? config.USDT_TRC20 : config.USDT_BEP20;
     const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "pay_via_usdt");
     await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`${address}\`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
 });
 
 bot.callbackQuery("usdt_confirm_click", async (ctx) => {
-    const u = m.getOrCreateUser(ctx.from.id); u.awaiting_utr = true;
+    const u = getLocalUser(ctx.from.id); u.awaiting_utr = true;
     const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
     await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`$${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`${u.chosen_network.toUpperCase()}\`\n\n⚠️ *SUBMIT TRANSACTION ID:*\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
 });
 
-// ⚡ CORE TEXT INPUT RECEIVER (Payment logic placed on highest priority)
+// ⚡ CORE LOGICAL TEXT MESSAGES HANDLER BLOCK (Highest Priority Fix)
 bot.on("message:text", async (ctx) => {
-    const u = m.getOrCreateUser(ctx.from.id, ctx.from.first_name);
+    const u = getLocalUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
 
-    // 1. Agar user amount daal raha hai
+    // 1. Check Amount processing flow
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) return ctx.reply("❌ Invalid amount! Try again:");
@@ -128,7 +138,7 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    // 2. Agar user UTR/Transaction Hash ID send kar raha hai
+    // 2. Check UTR/Transaction ID flow
     if (u.awaiting_utr) {
         u.awaiting_utr = false; const refKey = Date.now().toString();
         const amtUsd = u.chosen_pay_method === "pay_via_upi" ? (u.current_deposit_amt / config.USD_TO_INR_RATE) : u.current_deposit_amt;
@@ -142,7 +152,6 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    // 3. Agar koi normal service message ya link hai toh baki functions par bhejein
     await o.handleTextMessages(ctx);
 });
 
