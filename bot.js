@@ -8,31 +8,72 @@ const p = require('./paymentHandlers'); // Connection established bhai
 
 if (!config.BOT_TOKEN) process.exit(1);
 
-// 🔥 SABSE PEHLE BOT DEFINE HONA CHAHIYE (Isiliye crash ho raha tha)
 const bot = new Bot(config.BOT_TOKEN);
 
-// 🔐 STRICT ADMIN AUTH CHECK MIDDLEWARE
-const isAdmin = (ctx, next) => {
-    if (String(ctx.from?.id) !== String(config.ADMIN_ID)) {
+// 🔐 STRICT ADMIN AUTH CHECK MIDDLEWARE (Fixed to match grammY standards)
+const isAdmin = async (ctx, next) => {
+    const userId = ctx.from ? ctx.from.id : null;
+    if (String(userId) !== String(config.ADMIN_ID)) {
         return ctx.reply("❌ **Access Denied!** Ye command sirf Bot Owner/Admin ke liye reserved hai. 😎");
     }
-    return next();
+    await next();
 };
 
 // ==========================================
-// 👑 ADMIN CONTROLS (Strictly Guarded)
+// 👑 ADMIN CONTROLS (Direct Routes to ensure zero middleware errors)
 // ==========================================
-bot.command("addbal", isAdmin, p.handleAdminAddBal);
-bot.command("deductbal", isAdmin, p.handleAdminDeductBal);
-bot.command("user", isAdmin, p.handleAdminUserCheck);
-bot.command("broadcast", isAdmin, p.handleAdminBroadcast);
-bot.command("ban", isAdmin, p.handleAdminBan);
-bot.command("unban", isAdmin, p.handleAdminUnban);
+bot.command("addbal", isAdmin, async (ctx) => {
+    if (typeof p.handleAdminAddBal === 'function') {
+        return p.handleAdminAddBal(ctx);
+    }
+    ctx.reply("❌ Handler configuration error inside paymentHandlers.js");
+});
+
+bot.command("deductbal", isAdmin, async (ctx) => {
+    if (typeof p.handleAdminDeductBal === 'function') {
+        return p.handleAdminDeductBal(ctx);
+    }
+    ctx.reply("❌ Handler configuration error inside paymentHandlers.js");
+});
+
+bot.command("user", isAdmin, async (ctx) => {
+    if (typeof p.handleAdminUserCheck === 'function') {
+        return p.handleAdminUserCheck(ctx);
+    }
+    ctx.reply("❌ Handler configuration error inside paymentHandlers.js");
+});
+
+bot.command("broadcast", isAdmin, async (ctx) => {
+    if (typeof p.handleAdminBroadcast === 'function') {
+        return p.handleAdminBroadcast(ctx);
+    }
+    ctx.reply("❌ Handler configuration error inside paymentHandlers.js");
+});
+
+bot.command("ban", isAdmin, async (ctx) => {
+    if (typeof p.handleAdminBan === 'function') {
+        return p.handleAdminBan(ctx);
+    }
+    ctx.reply("❌ Handler configuration error inside paymentHandlers.js");
+});
+
+bot.command("unban", isAdmin, async (ctx) => {
+    if (typeof p.handleAdminUnban === 'function') {
+        return p.handleAdminUnban(ctx);
+    }
+    ctx.reply("❌ Handler configuration error inside paymentHandlers.js");
+});
 
 // Service Management Redirection
-bot.command("addservice", isAdmin, async (ctx) => { await o.handleTextMessages(ctx); });
-bot.command("updateservice", isAdmin, async (ctx) => { await o.handleTextMessages(ctx); });
-bot.command("delservice", isAdmin, async (ctx) => { await o.handleTextMessages(ctx); });
+bot.command("addservice", isAdmin, async (ctx) => { 
+    if (typeof o.handleTextMessages === 'function') return o.handleTextMessages(ctx);
+});
+bot.command("updateservice", isAdmin, async (ctx) => { 
+    if (typeof o.handleTextMessages === 'function') return o.handleTextMessages(ctx);
+});
+bot.command("delservice", isAdmin, async (ctx) => { 
+    if (typeof o.handleTextMessages === 'function') return o.handleTextMessages(ctx);
+});
 
 // ==========================================
 // 🌟 USER CORE COMMANDS & INTERFACE
@@ -69,6 +110,11 @@ bot.callbackQuery("usdt_confirm_click", p.handleUsdtConfirmClick);
 // ==========================================
 bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, p.handleAdminActions);
 bot.on("message:text", p.handleCombinedTextMessages);
+
+// Global Error Catch to prevent bot crashes
+bot.catch((err) => {
+    console.error(`Error caught by system: ${err.message}`);
+});
 
 // ==========================================
 // 🚀 RUNNER ENGINE ACTIVATION
