@@ -9,7 +9,6 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
-// Unified global containers shared space bhai
 const SHARED_DEPOSITS_MAP = {};
 let SERVICES_MASTER_DATA = require('./services');
 
@@ -27,7 +26,6 @@ function getLocalUser(id, name = "User") {
 function formatMoneyLocal(usd, pref) { return pref === "INR" ? `₹${(usd * config.USD_TO_INR_RATE).toFixed(2)}` : `$${usd.toFixed(2)}`; }
 function saveServicesToFile() { fs.writeFileSync('./services.js', `module.exports = ${JSON.stringify(SERVICES_MASTER_DATA, null, 4)};`, 'utf-8'); delete require.cache[require.resolve('./services')]; SERVICES_MASTER_DATA = require('./services'); }
 
-// 🛡️ SECURITY BAN INTERCEPTOR
 bot.use(async (ctx, next) => {
     if (ctx.from) {
         const u = DYNAMIC_USER_DB[ctx.from.id];
@@ -39,11 +37,11 @@ bot.use(async (ctx, next) => {
     await next();
 });
 
-// Standard dynamic routines exports
 module.exports = { DYNAMIC_USER_DB, SHARED_DEPOSITS_MAP, getLocalUser, formatMoneyLocal, forceSaveDatabase, saveServicesToFile };
 
-// Baki ka engine registration code niche import hoga bhai
+// Dono files ko safety ke liye split routing hooks par register kiya bhai
 require('./adminEngine')(bot);
+require('./adminCommands')(bot);
 
 async function startBotEngine() {
     try {
