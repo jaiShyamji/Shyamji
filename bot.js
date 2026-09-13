@@ -10,7 +10,6 @@ const o = require('./orderHandlers');
 if (!config.BOT_TOKEN) process.exit(1);
 const bot = new Bot(config.BOT_TOKEN);
 
-// 👑 Dynamic Database Linkage yahan par fix kar di hai bhai
 const DYNAMIC_USER_DB = {};
 const LOCAL_DEPOSITS = {};
 
@@ -90,7 +89,7 @@ bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
 bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
     const u = getLocalUser(ctx.from.id); u.awaiting_utr = true;
     const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
-    await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#${orderNum}\`\n\n⚠️ *SUBMIT UTR TRANSACTION ID:*\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke behavi:`, { parse_mode: "Markdown" });
+    await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#${orderNum}\`\n\n⚠️ *SUBMIT UTR TRANSACTION ID:*\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
 });
 
 bot.callbackQuery(/^usdtnet_(bep20|trc20)$/, async (ctx) => {
@@ -106,12 +105,10 @@ bot.callbackQuery("usdt_confirm_click", async (ctx) => {
     await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`$${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`${u.chosen_network.toUpperCase()}\`\n\n⚠️ *SUBMIT TRANSACTION ID:*\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
 });
 
-// ⚡ CORE LOGICAL TEXT MESSAGES HANDLER BLOCK (Highest Priority Fix)
 bot.on("message:text", async (ctx) => {
     const u = getLocalUser(ctx.from.id, ctx.from.first_name);
     const txt = ctx.message.text.trim();
 
-    // 1. Check Amount processing flow
     if (u.awaiting_deposit_amt && u.chosen_pay_method) {
         const amt = parseFloat(txt);
         if (isNaN(amt) || amt <= 0) return ctx.reply("❌ Invalid amount! Try again:");
@@ -120,14 +117,17 @@ bot.on("message:text", async (ctx) => {
         u.current_deposit_amt = amt;
         
         if (u.chosen_pay_method === "pay_via_upi") {
-            const upiUrlEncoded = encodeURIComponent(`upi://pay?pa=${config.UPI_ID}&pn=${encodeURIComponent(config.MERCHANT_NAME)}&am=${amt.toFixed(2)}&cu=INR`);
+            const rawUpi = "upi://pay?pa=" + config.UPI_ID + "&pn=" + encodeURIComponent(config.MERCHANT_NAME) + "&am=" + amt.toFixed(2) + "&cu=INR";
+            const upiUrlEncoded = encodeURIComponent(rawUpi);
+            const baseApiUrl = "https://upilinks.in" + upiUrlEncoded;
             
+            // 🌟 STRING CONCATENATION PERMANENTLY FIXED HERE - NO DISALLOWED CHARACTERS
             const appsKb = new InlineKeyboard()
-                .url("Google pay", `https://upilinks.in{upiUrlEncoded}`)
-                .url("PAYTM", `https://upilinks.in{upiUrlEncoded}`).row()
-                .url("PHONE PAY", `https://upilinks.in{upiUrlEncoded}`)
-                .url("UPI", `https://upilinks.in{upiUrlEncoded}`).row()
-                .url("OTHER PAYMENT METHOD", `https://upilinks.in{upiUrlEncoded}`).row()
+                .url("Google pay", baseApiUrl)
+                .url("PAYTM", baseApiUrl).row()
+                .url("PHONE PAY", baseApiUrl)
+                .url("UPI", baseApiUrl).row()
+                .url("OTHER PAYMENT METHOD", baseApiUrl).row()
                 .text("PAYMENT COMPLETE", "user_complete_pay_via_upi");
 
             await ctx.reply(`Select your payment method:\n\n💵 *Amount to Pay:* ₹${amt.toFixed(2)}\n📍 *UPI ID:* \`${config.UPI_ID}\`\n\n👉 App select karke pay karein aur uske baad *PAYMENT COMPLETE* par click karke UTR bhejein bhai.`, { reply_markup: appsKb, parse_mode: "Markdown" });
@@ -138,7 +138,6 @@ bot.on("message:text", async (ctx) => {
         return;
     }
 
-    // 2. Check UTR/Transaction ID flow
     if (u.awaiting_utr) {
         u.awaiting_utr = false; const refKey = Date.now().toString();
         const amtUsd = u.chosen_pay_method === "pay_via_upi" ? (u.current_deposit_amt / config.USD_TO_INR_RATE) : u.current_deposit_amt;
