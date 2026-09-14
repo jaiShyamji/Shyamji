@@ -12,55 +12,55 @@ module.exports = (bot) => {
 
     bot.command("ban", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ User nahi mila!");
-        core.DYNAMIC_USER_DB[target].is_banned = true; core.forceSaveDatabase(); await ctx.reply(`🚫 *User ${target} ko BAN kar diya gaya hai!*`);
+        const target = ctx.message.text.split(" "); if (!target || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User nahi mila!");
+        core.DYNAMIC_USER_DB.users[target].is_banned = true; core.forceSaveDatabase(); await ctx.reply(`🚫 *User ${target} ko BAN kar diya gaya hai!*`);
     });
 
     bot.command("unban", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ User nahi mila!");
-        core.DYNAMIC_USER_DB[target].is_banned = false; core.forceSaveDatabase(); await ctx.reply(`✅ *User ${target} ko UNBAN kar diya gaya hai!*`);
+        const target = ctx.message.text.split(" "); if (!target || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User nahi mila!");
+        core.DYNAMIC_USER_DB.users[target].is_banned = false; core.forceSaveDatabase(); await ctx.reply(`✅ *User ${target} ko UNBAN kar diya gaya hai!*`);
     });
 
     bot.command("addbalance", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const args = ctx.message.text.split(" "); const target = args[1], amt = parseFloat(args[2]);
-        if (!target || isNaN(amt) || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ Format Error!");
-        core.DYNAMIC_USER_DB[target].balance_usd += amt; core.forceSaveDatabase(); await ctx.reply(`💰 Added $${amt} to ${target}.`);
+        const args = ctx.message.text.split(" "); const target = args, amt = parseFloat(args);
+        if (!target || isNaN(amt) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ Format Error!");
+        core.DYNAMIC_USER_DB.users[target].balance_usd += amt; core.forceSaveDatabase(); await ctx.reply(`💰 Added $${amt} to ${target}.`);
         await bot.api.sendMessage(target, `✨ *Admin dwara tumhare account mein $${amt} add kar diye gaye hain!*`);
     });
 
     bot.command("deductbalance", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const args = ctx.message.text.split(" "); const target = args[1], amt = parseFloat(args[2]);
-        if (!target || isNaN(amt) || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ Format Error!");
-        core.DYNAMIC_USER_DB[target].balance_usd -= amt; if (core.DYNAMIC_USER_DB[target].balance_usd < 0) core.DYNAMIC_USER_DB[target].balance_usd = 0; core.forceSaveDatabase();
+        const args = ctx.message.text.split(" "); const target = args, amt = parseFloat(args);
+        if (!target || isNaN(amt) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ Format Error!");
+        core.DYNAMIC_USER_DB.users[target].balance_usd -= amt; if (core.DYNAMIC_USER_DB.users[target].balance_usd < 0) core.DYNAMIC_USER_DB.users[target].balance_usd = 0; core.forceSaveDatabase();
         await ctx.reply(`💸 Balance Deducted Done.`);
     });
 
     bot.command("checkuser", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB[target]) return ctx.reply("❌ User nahi mila!");
-        const u = core.DYNAMIC_USER_DB[target];
+        const target = ctx.message.text.split(" "); if (!target || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User nahi mila!");
+        const u = core.DYNAMIC_USER_DB.users[target];
         await ctx.reply(`👤 *USER LIVE DATA PROFILE (ID: ${target})*\n\n💵 *Balance:* $${u.balance_usd.toFixed(2)} (₹${(u.balance_usd * config.USD_TO_INR_RATE).toFixed(2)})\n💰 *Total Deposit:* $${u.total_deposit_usd.toFixed(2)}\n💸 *Total Spent:* $${u.spent_usd.toFixed(2)}\n📦 *Orders:* ${u.orders_count}\n🛑 *Status:* ${u.is_banned ? "BANNED" : "ACTIVE"}`, { parse_mode: "Markdown" });
     });
 
     bot.command("addservice", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const args = ctx.message.text.split(" ").slice(1); if (args.length < 4) return ctx.reply("❌ Format Error!");
-        SERVICES_MASTER_DATA[args[0]] = { name: args.slice(3).join(" "), rate: parseFloat(args[1]), type: args[2] }; core.saveServicesToFile(); await ctx.reply(`✅ Service Added!`);
+        SERVICES_MASTER_DATA[args] = { name: args.slice(3).join(" "), rate: parseFloat(args), type: args }; core.saveServicesToFile(); await ctx.reply(`✅ Service Added!`);
     });
 
     bot.command("updateservice", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const args = ctx.message.text.split(" ").slice(1); if (args.length < 2 || !SERVICES_MASTER_DATA[args[0]]) return ctx.reply("❌ Not found!");
-        SERVICES_MASTER_DATA[args[0]].rate = parseFloat(args[1]); core.saveServicesToFile(); await ctx.reply(`✅ Rate Updated!`);
+        const args = ctx.message.text.split(" ").slice(1); if (args.length < 2 || !SERVICES_MASTER_DATA[args]) return ctx.reply("❌ Not found!");
+        SERVICES_MASTER_DATA[args].rate = parseFloat(args); core.saveServicesToFile(); await ctx.reply(`✅ Rate Updated!`);
     });
 
     bot.command("delservice", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const args = ctx.message.text.split(" ").slice(1); if (args.length < 1 || !SERVICES_MASTER_DATA[args[0]]) return ctx.reply("❌ Not found!");
-        delete SERVICES_MASTER_DATA[args[0]]; core.saveServicesToFile(); await ctx.reply(`❌ Service Deleted!`);
+        const args = ctx.message.text.split(" ").slice(1); if (args.length < 1 || !SERVICES_MASTER_DATA[args]) return ctx.reply("❌ Not found!");
+        delete SERVICES_MASTER_DATA[args]; core.saveServicesToFile(); await ctx.reply(`❌ Service Deleted!`);
     });
 
     bot.callbackQuery("main_services", o.servicesMenu);
@@ -92,7 +92,11 @@ module.exports = (bot) => {
         if (u.awaiting_utr) {
             u.awaiting_utr = false; const refKey = Date.now().toString();
             const amtUsd = u.chosen_pay_method === "pay_via_upi" ? (u.current_deposit_amt / config.USD_TO_INR_RATE) : u.current_deposit_amt;
-            core.SHARED_DEPOSITS_MAP[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method };
+            
+            // 🌟 DATA WRITTEN PERMANENTLY IN THE JSON DATABASE STORAGE (Wipes Out Expired Bugs!)
+            core.DYNAMIC_USER_DB.pending_deposits[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method };
+            core.forceSaveDatabase(); // Hard update backup lock on disk
+            
             const adminKb = new InlineKeyboard().text("✅ ACCEPT", `adm_acc_${ctx.from.id}_${refKey}`).text("❌ CANCEL", `adm_can_${ctx.from.id}_${refKey}`);
             let alertMsg = `🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n👤 *User:* ${u.username} (ID: \`${ctx.from.id}\`)\n🆔 *Order Number:* \`#${u.current_order_num}\`\n💰 *Expected Amount:* ${u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt}\n🛠️ *Method:* \`${u.chosen_pay_method === "pay_via_upi" ? "UPI" : "USDT (" + u.chosen_network.toUpperCase() + ")"}\`\n📝 *ID/UTR:* \`${txt}\``;
             await bot.api.sendMessage(config.ADMIN_ID, alertMsg, { reply_markup: adminKb, parse_mode: "Markdown" });
