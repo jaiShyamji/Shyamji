@@ -61,10 +61,13 @@ module.exports = (bot) => {
         await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`$${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`${u.chosen_network.toUpperCase()}\`\n\n**⚠️ SUBMIT TRANSACTION ID:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
     });
 
+    // 🌟 PERMANENT DISK STORAGE ENFORCED: Data load and verification process fixed yahan bhai
     bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const parts = ctx.callbackQuery.data.split("_"), action = parts, userId = parseInt(parts), refKey = parts;
-        const depositData = core.SHARED_DEPOSITS_MAP[refKey]; if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
+        const depositData = core.DYNAMIC_USER_DB.pending_deposits[refKey]; // Fetched directly from permanent JSON backup!
+        if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Data missing or already approved!", show_alert: true });
+
         const u = core.getLocalUser(userId);
         if (action === "acc") {
             u.balance_usd += depositData.amount_usd; u.total_deposit_usd += depositData.amount_usd; core.forceSaveDatabase();
@@ -72,6 +75,7 @@ module.exports = (bot) => {
             await ctx.editMessageText(`✅ Request Accepted for User ${userId}`);
         } else {
             await bot.api.sendMessage(userId, `❌ *Payment Request Cancelled!*`); await ctx.editMessageText(`❌ Cancelled for User ${userId}`);
-        } delete core.SHARED_DEPOSITS_MAP[refKey];
+        } 
+        delete core.DYNAMIC_USER_DB.pending_deposits[refKey]; core.forceSaveDatabase();
     });
 };
