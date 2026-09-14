@@ -61,11 +61,15 @@ module.exports = (bot) => {
         await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`$${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`${u.chosen_network.toUpperCase()}\`\n\n**⚠️ SUBMIT TRANSACTION ID:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
     });
 
-    // 🌟 PERMANENT DISK STORAGE ENFORCED: Data load and verification process fixed yahan bhai
+    // 🌟 ARRAYS SPLIT INDEX SYSTEM 100% FIXED PERMANENTLY HERE
     bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const parts = ctx.callbackQuery.data.split("_"), action = parts, userId = parseInt(parts), refKey = parts;
-        const depositData = core.DYNAMIC_USER_DB.pending_deposits[refKey]; // Fetched directly from permanent JSON backup!
+        const parts = ctx.callbackQuery.data.split("_");
+        const action = parts[1]; 
+        const userId = parseInt(parts[2]); 
+        const refKey = parts[3];
+        
+        const depositData = core.DYNAMIC_USER_DB.pending_deposits[refKey]; 
         if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Data missing or already approved!", show_alert: true });
 
         const u = core.getLocalUser(userId);
@@ -74,7 +78,8 @@ module.exports = (bot) => {
             await bot.api.sendMessage(userId, `✅ *Payment Added Successful!* 💰\n\nBhai tumhara payment verify ho gaya hai.\n✨ *Added Amount:* ${core.formatMoneyLocal(depositData.amount_usd, u.currency)}\n💳 *Total Balance:* ${core.formatMoneyLocal(u.balance_usd, u.currency)}`, { parse_mode: "Markdown" });
             await ctx.editMessageText(`✅ Request Accepted for User ${userId}`);
         } else {
-            await bot.api.sendMessage(userId, `❌ *Payment Request Cancelled!*`); await ctx.editMessageText(`❌ Cancelled for User ${userId}`);
+            await bot.api.sendMessage(userId, `❌ *Payment Request Cancelled!*`); 
+            await ctx.editMessageText(`❌ Cancelled for User ${userId}`);
         } 
         delete core.DYNAMIC_USER_DB.pending_deposits[refKey]; core.forceSaveDatabase();
     });
