@@ -12,35 +12,41 @@ module.exports = (bot) => {
 
     bot.command("ban", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User database mein nahi mila!");
-        core.DYNAMIC_USER_DB.users[target].is_banned = true; core.forceSaveDatabase(); await ctx.reply(`🚫 *User \`${target}\` ko BAN kar diya gaya hai!*`, { parse_mode: "Markdown" });
+        const args = ctx.message.text.split(" "); const target = parseInt(args[1]); 
+        if (isNaN(target) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User database mein nahi mila!");
+        core.DYNAMIC_USER_DB.users[target].is_banned = true; core.forceSaveDatabase(); 
+        await ctx.reply(`🚫 *User \`${target}\` ko BAN kar diya gaya hai!*`, { parse_mode: "Markdown" });
     });
 
     bot.command("unban", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User database mein nahi mila!");
-        core.DYNAMIC_USER_DB.users[target].is_banned = false; core.forceSaveDatabase(); await ctx.reply(`✅ *User \`${target}\` ko UNBAN kar diya gaya hai!*`, { parse_mode: "Markdown" });
+        const args = ctx.message.text.split(" "); const target = parseInt(args[1]); 
+        if (isNaN(target) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User database mein nahi mila!");
+        core.DYNAMIC_USER_DB.users[target].is_banned = false; core.forceSaveDatabase(); 
+        await ctx.reply(`✅ *User \`${target}\` ko UNBAN kar diya gaya hai!*`, { parse_mode: "Markdown" });
     });
 
     bot.command("addbalance", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const args = ctx.message.text.split(" "), target = args[1], amt = parseFloat(args[2]);
-        if (!target || isNaN(amt) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ Use: \`/addbalance USER_ID AMOUNT\`");
-        core.DYNAMIC_USER_DB.users[target].balance_usd += amt; core.forceSaveDatabase(); await ctx.reply(`💰 Added $${amt} to ${target}.`);
+        const args = ctx.message.text.split(" "); const target = parseInt(args[1]); const amt = parseFloat(args[2]);
+        if (isNaN(target) || isNaN(amt) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ Use format: \`/addbalance USER_ID AMOUNT\`\nExample: /addbalance 8397689339 10");
+        core.DYNAMIC_USER_DB.users[target].balance_usd += amt; core.forceSaveDatabase(); 
+        await ctx.reply(`💰 Added $${amt} to ${target}. New: $${core.DYNAMIC_USER_DB.users[target].balance_usd.toFixed(2)}`);
         try { await bot.api.sendMessage(target, `✨ *Admin dwara tumhare account mein $${amt} add kar diye gaye hain!*`); } catch(e) {}
     });
 
     bot.command("deductbalance", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const args = ctx.message.text.split(" "), target = args[1], amt = parseFloat(args[2]);
-        if (!target || isNaN(amt) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ Use: \`/deductbalance USER_ID AMOUNT\`");
+        const args = ctx.message.text.split(" "); const target = parseInt(args[1]); const amt = parseFloat(args[2]);
+        if (isNaN(target) || isNaN(amt) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ Use format: \`/deductbalance USER_ID AMOUNT\`\nExample: /deductbalance 8397689339 5");
         core.DYNAMIC_USER_DB.users[target].balance_usd -= amt; if (core.DYNAMIC_USER_DB.users[target].balance_usd < 0) core.DYNAMIC_USER_DB.users[target].balance_usd = 0; core.forceSaveDatabase();
-        await ctx.reply(`💸 Balance Deducted/Gidak Done.`);
+        await ctx.reply(`💸 Balance Deducted. New: $${core.DYNAMIC_USER_DB.users[target].balance_usd.toFixed(2)}`);
     });
 
     bot.command("checkuser", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const target = ctx.message.text.split(" ")[1]; if (!target || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User nahi mila!");
+        const args = ctx.message.text.split(" "); const target = parseInt(args[1]); 
+        if (isNaN(target) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User nahi mila! ID sahi se check karein.");
         const u = core.DYNAMIC_USER_DB.users[target];
         await ctx.reply(`👤 *USER LIVE DATA PROFILE (ID: ${target})*\n\n💵 *Balance:* $${u.balance_usd.toFixed(2)} (${core.formatMoneyLocal(u.balance_usd, "INR")})\n💰 *Total Deposit:* $${u.total_deposit_usd.toFixed(2)}\n💸 *Total Spent:* $${u.spent_usd.toFixed(2)}\n📦 *Orders:* ${u.orders_count}\n🛑 *Status:* ${u.is_banned ? "BANNED" : "ACTIVE"}`, { parse_mode: "Markdown" });
     });
@@ -61,7 +67,7 @@ module.exports = (bot) => {
 
     bot.command("delservice", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
-        const id = ctx.message.text.split(" ")[1]; if (!id || !SERVICES_MASTER_DATA[id]) return ctx.reply("❌ ID nahi mili!");
+        const args = ctx.message.text.split(" "); const id = args[1]; if (!id || !SERVICES_MASTER_DATA[id]) return ctx.reply("❌ ID nahi mili!");
         delete SERVICES_MASTER_DATA[id]; core.saveServicesToFile(); await ctx.reply(`❌ Service Deleted Successfully!`);
     });
 
