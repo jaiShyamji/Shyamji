@@ -28,8 +28,6 @@ bot.use(async (ctx, next) => {
 });
 
 module.exports = { DYNAMIC_USER_DB, getLocalUser, forceSaveDatabase };
-
-// Saare separate tiny modules load ho rahe hain bina fhasay
 require('./masterEngine')(bot);
 require('./masterCommands')(bot);
 
