@@ -65,7 +65,7 @@ bot.callbackQuery("main_add_funds", async (ctx) => {
 
 bot.callbackQuery(/^pay_(via_upi|via_usdt)$/, async (ctx) => {
     const u = getLocalUser(ctx.from.id); u.chosen_pay_method = ctx.callbackQuery.data; u.awaiting_deposit_amt = true;
-    if (u.chosen_pay_method === "pay_via_upi") { await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\n¼कृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`); }
+    if (u.chosen_pay_method === "pay_via_upi") { await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\nकृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`); }
     else { await ctx.editMessageText(`💰 *Enter Amount:* USDT\n\nकृपया वह राशि (USDT) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (USDT) you want to add:`); }
 });
 
@@ -89,11 +89,10 @@ bot.callbackQuery("usdt_confirm_click", async (ctx) => {
     await ctx.editMessageText("🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* `$" + u.current_deposit_amt.toFixed(2) + "`\n🌐 *Network:* `" + u.chosen_network.toUpperCase() + "`\n🆔 *Order Number:* `# " + orderNum + "`\n\n**⚠️ SUBMIT TRANSACTION ID / HASH:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:", { parse_mode: "Markdown" });
 });
 
-// 👑 Galti No. 1 Fixed: Dynamic indices mapping updated strictly for approval routines
 bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const parts = ctx.callbackQuery.data.split("_"), action = parts[1], userId = parseInt(parts[2]), refKey = parts[3];
-    const depositData = DYNAMIC_USER_DB.pending_deposits[refKey]; if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Link Expired or Already Approved!", show_alert: true });
+    const depositData = DYNAMIC_USER_DB.pending_deposits[refKey]; if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Link Expired!", show_alert: true });
     const u = getLocalUser(userId);
     if (action === "acc") {
         u.balance_usd += depositData.amount_usd; u.total_deposit_usd += depositData.amount_usd; forceSaveDatabase();
@@ -121,7 +120,6 @@ bot.command("unban", async (ctx) => {
     DYNAMIC_USER_DB.users[target].is_banned = false; forceSaveDatabase(); await ctx.reply(`✅ User \`${target}\` UNBAN ho gaya hai.`);
 });
 
-// 👑 Galti No. 2 Fixed: Template literal string concatenated properly
 bot.command("addbalance", async (ctx) => {
     if (ctx.from.id !== config.ADMIN_ID) return;
     const args = ctx.message.text.split(" "), target = parseInt(args[1]), amt = parseFloat(args[2]);
@@ -132,3 +130,5 @@ bot.command("addbalance", async (ctx) => {
 });
 
 bot.command("deductbalance", async (ctx) => {
+    if (ctx.from.id !== config.ADMIN_ID) return;
+    const args = ctx.message.text.split(" "), target = parseInt(args[1]), amt = parseFloat(args[2]);
