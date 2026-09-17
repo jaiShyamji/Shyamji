@@ -1,7 +1,7 @@
 const { InlineKeyboard } = require('grammy');
 const config = require('./config');
 const o = require('./orderHandlers');
-const core = require('./bot'); 
+const core = require('./bot');
 
 module.exports = (bot) => {
     bot.command("start", async (ctx) => {
@@ -49,30 +49,26 @@ module.exports = (bot) => {
         await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹\${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#\${orderNum}\`\n\n**⚠️ SUBMIT UTR TRANSACTION ID:**\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
     });
 
-    // 🪙 100% FIXED USDT CALLBACK EVENTS REDIRECTION WITHOUT CROSS-TALK COLLISION
+    // 🪙 Aapke screenshot line 52 ka original format bina kisi escape break ke fix kar diya bhai
     bot.callbackQuery(/^usdtnet_(bep20|trc20)\$/, async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); 
         const network = ctx.callbackQuery.data.split("_")[1]; 
         u.chosen_network = network;
         const address = network === "trc20" ? config.USDT_TRC20 : config.USDT_BEP20;
-        
-        const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds");
-        await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`\${address}\`\n\n👉 *Instructions:* Diye gaye Address par exactly $${u.current_deposit_amt.toFixed(2)} send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
+        const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "pay_via_usdt");
+        await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`\${address}\`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
     });
 
     bot.callbackQuery("usdt_confirm_click", async (ctx) => {
-        const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; 
-        const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
-        await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`\$\${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`\${u.chosen_network.toUpperCase()}\`\n🆔 *Order Number:* \`#\${orderNum}\`\n\n**⚠️ SUBMIT TRANSACTION ID / HASH:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
+        const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
+        await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`\$\${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`\${u.chosen_network.toUpperCase()}\`\n\n**⚠️ SUBMIT TRANSACTION ID:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
     });
 
     bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)\$/, async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const parts = ctx.callbackQuery.data.split("_");
-        const action = parts[1], userId = parseInt(parts[2]), refKey = parts[3];
-        const depositData = core.DYNAMIC_USER_DB.pending_deposits[refKey]; 
-        if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Data missing or already approved!", show_alert: true });
-
+        const action = parts[1]; const userId = parseInt(parts[2]); const refKey = parts[3];
+        const depositData = core.DYNAMIC_USER_DB.pending_deposits[refKey]; if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
         const u = core.getLocalUser(userId);
         if (action === "acc") {
             u.balance_usd += depositData.amount_usd; u.total_deposit_usd += depositData.amount_usd; core.forceSaveDatabase();
@@ -80,7 +76,6 @@ module.exports = (bot) => {
             await ctx.editMessageText(`✅ Request Accepted for User ${userId}`);
         } else {
             await bot.api.sendMessage(userId, `❌ *Payment Request Cancelled!*`); await ctx.editMessageText(`❌ Cancelled for User ${userId}`);
-        } 
-        delete core.DYNAMIC_USER_DB.pending_deposits[refKey]; core.forceSaveDatabase();
+        } delete core.DYNAMIC_USER_DB.pending_deposits[refKey]; core.forceSaveDatabase();
     });
 };
