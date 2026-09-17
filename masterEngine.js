@@ -22,19 +22,19 @@ module.exports = (bot) => {
     });
     bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; u.current_order_num = Math.floor(100000 + Math.random() * 900000);
-        await ctx.editMessageText("💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* `₹" + u.current_deposit_amt.toFixed(2) + "`\n🆔 *Order Number:* `# " + u.current_order_num + "`\n\n**⚠️ SUBMIT UTR TRANSACTION ID:**\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:", { parse_mode: "Markdown" });
+        await ctx.editMessageText("💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* `₹" + u.current_deposit_amt.toFixed(2) + "`\n🆔 *Order Number:* `# " + u.current_order_num + "`\n\n**⚠️ SUBMIT UTR TRANSACTION ID:**\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo:", { parse_mode: "Markdown" });
     });
     bot.callbackQuery("usdtnet_bep20", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.chosen_network = "bep20";
-        await ctx.editMessageText("🪙 *USDT BEP20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $" + u.current_deposit_amt.toFixed(2) + "\n📍 *Address:* `" + getLiveBep() + "`\n\n👉 *Instructions:* Diye gaye Address par exactly $" + u.current_deposit_amt.toFixed(2) + " send karke neeche *CONFIRM PAYMENT* par click karein.", { reply_markup: new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds"), parse_mode: "Markdown" });
+        await ctx.editMessageText("🪙 *USDT BEP20 MANUAL DEPOSIT*\n\n💵 *Amount:* $" + u.current_deposit_amt.toFixed(2) + "\n📍 *Address:* `" + getLiveBep() + "`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.", { reply_markup: new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds"), parse_mode: "Markdown" });
     });
     bot.callbackQuery("usdtnet_trc20", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.chosen_network = "trc20";
-        await ctx.editMessageText("🪙 *USDT TRC20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $" + u.current_deposit_amt.toFixed(2) + "\n📍 *Address:* `" + getLiveTrc() + "`\n\n👉 *Instructions:* Diye gaye Address par exactly $" + u.current_deposit_amt.toFixed(2) + " send karke neeche *CONFIRM PAYMENT* par click karein.", { reply_markup: new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds"), parse_mode: "Markdown" });
+        await ctx.editMessageText("🪙 *USDT TRC20 MANUAL DEPOSIT*\n\n💵 *Amount:* $" + u.current_deposit_amt.toFixed(2) + "\n📍 *Address:* `" + getLiveTrc() + "`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.", { reply_markup: new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds"), parse_mode: "Markdown" });
     });
     bot.callbackQuery("usdt_confirm_click", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; u.current_order_num = Math.floor(100000 + Math.random() * 900000);
-        await ctx.editMessageText("🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* `$" + u.current_deposit_amt.toFixed(2) + "`\n🌐 *Network:* `" + u.chosen_network.toUpperCase() + "`\n🆔 *Order Number:* `# " + u.current_order_num + "`\n\n**⚠️ SUBMIT TRANSACTION ID / HASH:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:", { parse_mode: "Markdown" });
+        await ctx.editMessageText("🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Amount:* `$" + u.current_deposit_amt.toFixed(2) + "`\n🌐 *Network:* `" + u.chosen_network.toUpperCase() + "`\n🆔 *Order:* `# " + u.current_order_num + "`\n\n**⚠️ SUBMIT HASH ID:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:", { parse_mode: "Markdown" });
     });
 
     bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)$/, async (ctx) => {
@@ -82,7 +82,7 @@ module.exports = (bot) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const target = parseInt(ctx.message.text.split(" ")); if (isNaN(target) || !core.DYNAMIC_USER_DB.users[target]) return ctx.reply("❌ User nahi mila!");
         const u = core.DYNAMIC_USER_DB.users[target];
-        await ctx.reply("👤 *USER LIVE DATA PROFILE (ID: " + target + ")*\n\n💵 *Balance:* $" + u.balance_usd.toFixed(2) + " (" + formatMoneyLocal(u.balance_usd, "INR") + ")\n💰 *Total Deposit:* $" + u.total_deposit_usd.toFixed(2) + "\n💸 *Total Spent:* $" + u.spent_usd.toFixed(2) + "\n📦 *Orders placed:* " + u.orders_count + "\n⏳ *Pending Orders:* " + u.pending_orders + "\n🛑 *Status:* " + (u.is_banned ? "BANNED" : "ACTIVE"), { parse_mode: "Markdown" });
+        await ctx.reply("👤 *USER PROFILE (ID: " + target + ")*\n\n💵 *Balance:* $" + u.balance_usd.toFixed(2) + " (" + formatMoneyLocal(u.balance_usd, "INR") + ")\n💰 *Deposit:* $" + u.total_deposit_usd.toFixed(2) + "\n💸 *Spent:* $" + u.spent_usd.toFixed(2) + "\n📦 *Orders:* " + u.orders_count + "\n⏳ *Pending:* " + u.pending_orders + "\n🛑 *Status:* " + (u.is_banned ? "BANNED" : "ACTIVE"), { parse_mode: "Markdown" });
     });
     bot.command("setupi", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
@@ -91,3 +91,6 @@ module.exports = (bot) => {
     });
     bot.command("settrc20", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
+        const newWallet = ctx.message.text.split(" "); if (!newWallet) return ctx.reply("❌ Format: \`/settrc20 WALLET_ADDRESS\`");
+        core.DYNAMIC_USER_DB.dynamic_config.usdt_trc20 = newWallet; core.forceSaveDatabase(); await ctx.reply(`🪙 *USDT TRC20 Address Updated!*`);
+    });
