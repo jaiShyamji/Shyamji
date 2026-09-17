@@ -1,3 +1,4 @@
+const { InlineKeyboard } = require('grammy');
 const config = require('./config');
 const o = require('./orderHandlers');
 const core = require('./bot');
