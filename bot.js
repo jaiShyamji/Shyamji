@@ -28,9 +28,12 @@ bot.use(async (ctx, next) => {
 });
 
 module.exports = { DYNAMIC_USER_DB, getLocalUser, forceSaveDatabase };
-require('./masterEngine')(bot); // Safe linked engine module
+
+// Saare separate tiny modules load ho rahe hain bina fhasay
+require('./masterEngine')(bot);
+require('./masterCommands')(bot);
 
 async function startBotEngine() {
-    try { await bot.api.deleteWebhook({ drop_pending_updates: true }); run(bot); console.log("HAPPY REACTION Perfect Core Active Now!"); } catch (err) { setTimeout(startBotEngine, 5000); }
+    try { await bot.api.deleteWebhook({ drop_pending_updates: true }); run(bot); console.log("HAPPY REACTION Perfect Core Active!"); } catch (err) { setTimeout(startBotEngine, 5000); }
 }
 startBotEngine();
