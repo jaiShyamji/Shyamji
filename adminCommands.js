@@ -10,16 +10,9 @@ module.exports = (bot) => {
     bot.command("admin", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         await ctx.reply(`⚙️ *HAPPY REACTION Super Admin Panel Commands List*:\n\n` +
-            `👤 *User Controls:*\n` +
-            `▫️ \`/ban USER_ID\` \n▫️ \`/unban USER_ID\` \n` +
-            `▫️ \`/addbalance USER_ID AMOUNT\` \n▫️ \`/deductbalance USER_ID AMOUNT\` \n` +
-            `▫️ \`/checkuser USER_ID\` -> View complete user profile\n\n` +
-            `🛠️ *SMM Services Controls:*\n` +
-            `▫️ \`/addservice ID Rate Type Name\`\n` +
-            `▫️ \`/updateservice ID NewRate\`\n` +
-            `▫️ \`/delservice ID\`\n\n` +
-            `💳 *Payment Config Controls (Direct Live Change):*\n` +
-            `▫️ \`/setupi NEW_UPI_ID\` \n▫️ \`/settrc20 WALLET_ADDRESS\` \n▫️ \`/setbep20 WALLET_ADDRESS\``, { parse_mode: "Markdown" });
+            `👤 *User Controls:*\n▫️ \`/ban USER_ID\` \n▫️ \`/unban USER_ID\` \n▫️ \`/addbalance USER_ID AMOUNT\` \n▫️ \`/deductbalance USER_ID AMOUNT\` \n▫️ \`/checkuser USER_ID\` -> View user profile\n\n` +
+            `🛠️ *SMM Services Controls:*\n▫️ \`/addservice ID Rate Type Name\`\n▫️ \`/updateservice ID NewRate\`\n▫️ \`/delservice ID\`\n\n` +
+            `💳 *Payment Config Controls (Direct Live Change):*\n▫️ \`/setupi NEW_UPI_ID\` \n▫️ \`/settrc20 WALLET_ADDRESS\` \n▫️ \`/setbep20 WALLET_ADDRESS\``, { parse_mode: "Markdown" });
     });
 
     bot.command("ban", async (ctx) => {
@@ -60,7 +53,7 @@ module.exports = (bot) => {
     bot.command("setupi", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const newUpi = ctx.message.text.split(" ")[1]; if (!newUpi) return ctx.reply("❌ Format: \`/setupi NEW_UPI_ID\`");
-        core.DYNAMIC_USER_DB.dynamic_config.upi_id = newUpi; core.forceSaveDatabase(); await ctx.reply(`✅ *Live UPI ID Updated to:* \`${newUpi}\``, { parse_mode: "Markdown" });
+        core.DYNAMIC_USER_DB.dynamic_config.upi_id = newUpi; core.forceSaveDatabase(); await ctx.reply(`✅ *Live UPI ID Updated to:* \`${newUpi}\``);
     });
 
     bot.command("settrc20", async (ctx) => {
@@ -80,8 +73,7 @@ module.exports = (bot) => {
         const args = ctx.message.text.split(" ").slice(1); if (args.length < 4) return ctx.reply("❌ Format error!");
         const id = args[0], rate = parseFloat(args[1]), type = args[2], name = args.slice(3).join(" ");
         SERVICES_MASTER_DATA[id] = { name: name, rate: rate, type: type };
-        fs.writeFileSync('./services.js', `module.exports = ${JSON.stringify(SERVICES_MASTER_DATA, null, 4)};`, 'utf-8');
-        await ctx.reply(`✅ Service Added successfully!`);
+        fs.writeFileSync('./services.js', `module.exports = ${JSON.stringify(SERVICES_MASTER_DATA, null, 4)};`, 'utf-8'); await ctx.reply(`✅ Service Added successfully!`);
     });
 
     bot.command("updateservice", async (ctx) => {
@@ -89,16 +81,14 @@ module.exports = (bot) => {
         const args = ctx.message.text.split(" ").slice(1); if (args.length < 2) return ctx.reply("❌ Format error!");
         const id = args[0], newRate = parseFloat(args[1]); if (!SERVICES_MASTER_DATA[id]) return ctx.reply("❌ ID nahi mili!");
         SERVICES_MASTER_DATA[id].rate = newRate;
-        fs.writeFileSync('./services.js', `module.exports = ${JSON.stringify(SERVICES_MASTER_DATA, null, 4)};`, 'utf-8');
-        await ctx.reply(`✅ Rate Updated successfully!`);
+        fs.writeFileSync('./services.js', `module.exports = ${JSON.stringify(SERVICES_MASTER_DATA, null, 4)};`, 'utf-8'); await ctx.reply(`✅ Rate Updated successfully!`);
     });
 
     bot.command("delservice", async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const id = ctx.message.text.split(" ")[1]; if (!id || !SERVICES_MASTER_DATA[id]) return ctx.reply("❌ ID nahi mili!");
         delete SERVICES_MASTER_DATA[id];
-        fs.writeFileSync('./services.js', `module.exports = ${JSON.stringify(SERVICES_MASTER_DATA, null, 4)};`, 'utf-8');
-        await ctx.reply(`❌ Service Deleted successfully!`);
+        fs.writeFileSync('./services.js', `module.exports = ${JSON.stringify(SERVICES_MASTER_DATA, null, 4)};`, 'utf-8'); await ctx.reply(`❌ Service Deleted successfully!`);
     });
 
     bot.callbackQuery("main_services", o.servicesMenu);
@@ -133,3 +123,4 @@ module.exports = (bot) => {
             core.DYNAMIC_USER_DB.pending_deposits[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method }; core.forceSaveDatabase();
             
             const adminKb = new InlineKeyboard().text("✅ ACCEPT", "adm_acc_" + ctx.from.id + "_" + refKey).text("❌ CANCEL", "adm_can_" + ctx.from.id + "_" + refKey);
+            let alertMsg = "🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n👤 *User:* " + u.username + " (ID: `" + ctx.from.id + "`)\n🆔 *Order Number:* `# " + u.current_order_num + "`\n💰 *Expected Amount:* " + (u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt) + "\n🛠️ *Method:* " + (u.chosen_pay_method === "pay_via_upi" ? "UPI" : "USDT (" + u.chosen_network.toUpperCase() + ")") + "\n📝 *ID/UTR:* `" + txt + "`";
