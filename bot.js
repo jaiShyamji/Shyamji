@@ -39,8 +39,10 @@ bot.use(async (ctx, next) => {
 
 module.exports = { DYNAMIC_USER_DB, getLocalUser, formatMoneyLocal, forceSaveDatabase };
 
+// Saare features blocks registers bhai
 require('./adminEngine')(bot);
 require('./adminCommands')(bot);
+require('./userMessages')(bot); // Naya message worker link kiya
 
 async function startBotEngine() {
     try {
