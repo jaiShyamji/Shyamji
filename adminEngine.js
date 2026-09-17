@@ -38,7 +38,6 @@ module.exports = (bot) => {
         await ctx.editMessageText("💳 *Select Payment Method / पेमेंट का तरीका चुनें:*", { reply_markup: kb, parse_mode: "Markdown" });
     });
 
-    // ⚡ 100% FIXED FIXED INLINE PATHS FOR UPI & USDT (Bypassed Freezing Bugs)
     bot.callbackQuery("pay_via_upi", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.chosen_pay_method = "pay_via_upi"; u.awaiting_deposit_amt = true;
         await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\nकृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`);
@@ -49,27 +48,35 @@ module.exports = (bot) => {
         await ctx.editMessageText(`💰 *Enter Amount:* USDT\n\nकृपया वह राशि (USDT) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (USDT) you want to add:`);
     });
 
+    // 🌟 1. UPI CONFIRM PAYMENT LAYOUT STRINGS FIXED 100%
     bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
-        const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
-        await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹\${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#\${orderNum}\`\n\n**⚠️ SUBMIT UTR TRANSACTION ID:**\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
+        const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; 
+        const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
+        
+        await ctx.editMessageText("💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* `₹" + u.current_deposit_amt.toFixed(2) + "`\n🆔 *Order Number:* `# " + orderNum + "`\n\n**⚠️ SUBMIT UTR TRANSACTION ID:**\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:", { parse_mode: "Markdown" });
     });
 
-    // 🪙 USDT Network Buttons Flow (BEP20 / TRC20)
+    // 🪙 2. USDT TRC20 & BEP20 WALLET ADDRESS RENDER LINES 100% FIXED
     bot.callbackQuery("usdtnet_bep20", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.chosen_network = "bep20";
         const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds");
-        await ctx.editMessageText(`🪙 *USDT BEP20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`\${config.USDT_BEP20}\`\n\n👉 *Instructions:* Diye gaye Address par exactly $${u.current_deposit_amt.toFixed(2)} send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
+        
+        await ctx.editMessageText("🪙 *USDT BEP20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* \$" + u.current_deposit_amt.toFixed(2) + "\n📍 *Address:* `" + config.USDT_BEP20 + "`\n\n👉 *Instructions:* Diye gaye Address par exactly \$" + u.current_deposit_amt.toFixed(2) + " send karke neeche *CONFIRM PAYMENT* par click karein.", { reply_markup: kb, parse_mode: "Markdown" });
     });
 
     bot.callbackQuery("usdtnet_trc20", async (ctx) => {
         const u = core.getLocalUser(ctx.from.id); u.chosen_network = "trc20";
         const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds");
-        await ctx.editMessageText(`🪙 *USDT TRC20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`\${config.USDT_TRC20}\`\n\n👉 *Instructions:* Diye gaye Address par exactly $${u.current_deposit_amt.toFixed(2)} send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
+        
+        await ctx.editMessageText("🪙 *USDT TRC20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* \$" + u.current_deposit_amt.toFixed(2) + "\n📍 *Address:* `" + config.USDT_TRC20 + "`\n\n👉 *Instructions:* Diye gaye Address par exactly \$" + u.current_deposit_amt.toFixed(2) + " send karke neeche *CONFIRM PAYMENT* par click karein.", { reply_markup: kb, parse_mode: "Markdown" });
     });
 
+    // 🪙 3. USDT CONFIRM PAYMENT LAYOUT STRINGS FIXED 100%
     bot.callbackQuery("usdt_confirm_click", async (ctx) => {
-        const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
-        await ctx.editMessageText(`🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* \`\$\${u.current_deposit_amt.toFixed(2)}\`\n🌐 *Network:* \`\${u.chosen_network.toUpperCase()}\`\n\n**⚠️ SUBMIT TRANSACTION ID:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:`, { parse_mode: "Markdown" });
+        const u = core.getLocalUser(ctx.from.id); u.awaiting_utr = true; 
+        const orderNum = Math.floor(100000 + Math.random() * 900000); u.current_order_num = orderNum;
+        
+        await ctx.editMessageText("🪙 *USDT Deposit Initiated!* ✅\n\n📊 *Requested Amount:* `$" + u.current_deposit_amt.toFixed(2) + "`\n🌐 *Network:* `" + u.chosen_network.toUpperCase() + "`\n🆔 *Order Number:* `# " + orderNum + "`\n\n**⚠️ SUBMIT TRANSACTION ID / HASH:**\nBhai, apni USDT Transaction Hash ID niche message box mein type karke send karo:", { parse_mode: "Markdown" });
     });
 
     bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)\$/, async (ctx) => {
@@ -77,6 +84,7 @@ module.exports = (bot) => {
         const parts = ctx.callbackQuery.data.split("_");
         const action = parts, userId = parseInt(parts), refKey = parts;
         const depositData = core.DYNAMIC_USER_DB.pending_deposits[refKey]; if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
+
         const u = core.getLocalUser(userId);
         if (action === "acc") {
             u.balance_usd += depositData.amount_usd; u.total_deposit_usd += depositData.amount_usd; core.forceSaveDatabase();
