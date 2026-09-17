@@ -123,4 +123,3 @@ module.exports = (bot) => {
             core.DYNAMIC_USER_DB.pending_deposits[refKey] = { amount_usd: amtUsd, utr: txt, method: u.chosen_pay_method }; core.forceSaveDatabase();
             
             const adminKb = new InlineKeyboard().text("✅ ACCEPT", "adm_acc_" + ctx.from.id + "_" + refKey).text("❌ CANCEL", "adm_can_" + ctx.from.id + "_" + refKey);
-            let alertMsg = "🔔 *NEW MANUAL PAYMENT REQUEST!* 🔔\n\n👤 *User:* " + u.username + " (ID: `" + ctx.from.id + "`)\n🆔 *Order Number:* `# " + u.current_order_num + "`\n💰 *Expected Amount:* " + (u.chosen_pay_method === "pay_via_upi" ? "₹" + u.current_deposit_amt : "$" + u.current_deposit_amt) + "\n🛠️ *Method:* " + (u.chosen_pay_method === "pay_via_upi" ? "UPI" : "USDT (" + u.chosen_network.toUpperCase() + ")") + "\n📝 *ID/UTR:* `" + txt + "`";
