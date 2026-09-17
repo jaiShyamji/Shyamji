@@ -38,11 +38,15 @@ module.exports = (bot) => {
         await ctx.editMessageText("💳 *Select Payment Method / पेमेंट का तरीका चुनें:*", { reply_markup: kb, parse_mode: "Markdown" });
     });
 
-    // 🌟 SCREENSHOT EXCLUSIVITY MATCHED: Regex patterns are fully verified from your actual screenshots
-    bot.callbackQuery(/^pay_(via_upi|via_usdt)\$/, async (ctx) => {
-        const u = core.getLocalUser(ctx.from.id); u.chosen_pay_method = ctx.callbackQuery.data; u.awaiting_deposit_amt = true;
-        if (u.chosen_pay_method === "pay_via_upi") { await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\nकृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`); }
-        else { await ctx.editMessageText(`💰 *Enter Amount:* USDT\n\nकृपया वह राशि (USDT) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (USDT) you want to add:`); }
+    // ⚡ 100% FIXED FIXED INLINE PATHS FOR UPI & USDT (Bypassed Freezing Bugs)
+    bot.callbackQuery("pay_via_upi", async (ctx) => {
+        const u = core.getLocalUser(ctx.from.id); u.chosen_pay_method = "pay_via_upi"; u.awaiting_deposit_amt = true;
+        await ctx.editMessageText(`💰 *Enter Amount:* UPI\n\nकृपया वह राशि (INR ₹) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (INR ₹) you want to add:`);
+    });
+
+    bot.callbackQuery("pay_via_usdt", async (ctx) => {
+        const u = core.getLocalUser(ctx.from.id); u.chosen_pay_method = "pay_via_usdt"; u.awaiting_deposit_amt = true;
+        await ctx.editMessageText(`💰 *Enter Amount:* USDT\n\nकृपया वह राशि (USDT) टाइप करें जो आप जोड़ना चाहते हैं:\nPlease enter the amount (USDT) you want to add:`);
     });
 
     bot.callbackQuery("user_complete_pay_via_upi", async (ctx) => {
@@ -50,11 +54,17 @@ module.exports = (bot) => {
         await ctx.editMessageText(`💵 *Payment Initiated!* ✅\n\n📊 *Expected Amount:* \`₹\${u.current_deposit_amt.toFixed(2)}\`\n🆔 *Order Number:* \`#\${orderNum}\`\n\n**⚠️ SUBMIT UTR TRANSACTION ID:**\nBhai, ab apna 12-digit UTR/Reference number niche message box mein type karke send karo aur sath mein payment ka screenshot bhi attach karke bhejo:`, { parse_mode: "Markdown" });
     });
 
-    bot.callbackQuery(/^usdtnet_(bep20|trc20)\$/, async (ctx) => {
-        const u = core.getLocalUser(ctx.from.id); const network = ctx.callbackQuery.data.split("_")[1]; u.chosen_network = network;
-        const address = network === "trc20" ? config.USDT_TRC20 : config.USDT_BEP20;
-        const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "pay_via_usdt");
-        await ctx.editMessageText(`🪙 *USDT ${network.toUpperCase()} MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`\${address}\`\n\n👉 Address par send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
+    // 🪙 USDT Network Buttons Flow (BEP20 / TRC20)
+    bot.callbackQuery("usdtnet_bep20", async (ctx) => {
+        const u = core.getLocalUser(ctx.from.id); u.chosen_network = "bep20";
+        const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds");
+        await ctx.editMessageText(`🪙 *USDT BEP20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`\${config.USDT_BEP20}\`\n\n👉 *Instructions:* Diye gaye Address par exactly $${u.current_deposit_amt.toFixed(2)} send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
+    });
+
+    bot.callbackQuery("usdtnet_trc20", async (ctx) => {
+        const u = core.getLocalUser(ctx.from.id); u.chosen_network = "trc20";
+        const kb = new InlineKeyboard().text("CONFIRM PAYMENT", "usdt_confirm_click").row().text("BACK", "main_add_funds");
+        await ctx.editMessageText(`🪙 *USDT TRC20 MANUAL DEPOSIT*\n\n💵 *Amount to Pay:* $${u.current_deposit_amt.toFixed(2)}\n📍 *Address:* \`\${config.USDT_TRC20}\`\n\n👉 *Instructions:* Diye gaye Address par exactly $${u.current_deposit_amt.toFixed(2)} send karke neeche *CONFIRM PAYMENT* par click karein.`, { reply_markup: kb, parse_mode: "Markdown" });
     });
 
     bot.callbackQuery("usdt_confirm_click", async (ctx) => {
@@ -65,7 +75,7 @@ module.exports = (bot) => {
     bot.callbackQuery(/^adm_(acc|can)_(.+)_(.+)\$/, async (ctx) => {
         if (ctx.from.id !== config.ADMIN_ID) return;
         const parts = ctx.callbackQuery.data.split("_");
-        const action = parts[1], userId = parseInt(parts[2]), refKey = parts[3];
+        const action = parts, userId = parseInt(parts), refKey = parts;
         const depositData = core.DYNAMIC_USER_DB.pending_deposits[refKey]; if (!depositData) return ctx.answerCallbackQuery({ text: "❌ Request expired!", show_alert: true });
         const u = core.getLocalUser(userId);
         if (action === "acc") {
