@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>YOUR BRAND NAME</title>
+  <title>VIP VEER PANEL</title>
 
   <meta name="description"
         content="Official premium access page of YOUR BRAND NAME. Download the application, register now and join our Telegram community.">
@@ -603,7 +603,7 @@
           <!-- APK DOWNLOAD -->
 
           <a
-            href="YOUR_APK_DOWNLOAD_LINK"
+            href="https://www.mediafire.com/file/yv9cuk2guhcff7y/ᴄᴏʙʀᴀ+ɴᴜᴍʙᴇʀ+ʜᴀᴄᴋ+(2).apk/file"
             class="btn btn-primary">
             📲 Download App
           </a>
@@ -611,7 +611,7 @@
           <!-- REGISTRATION -->
 
           <a
-            href="YOUR_REGISTRATION_LINK"
+            href="https://www.veergame38.com/#/register?invitationCode=84312118305"
             target="_blank"
             class="btn btn-register">
             🚀 Register Now
@@ -620,7 +620,7 @@
           <!-- TELEGRAM -->
 
           <a
-            href="YOUR_TELEGRAM_LINK"
+            href="https://t.me/TRICKVIP"
             target="_blank"
             class="btn btn-telegram">
             ✈️ Join Telegram
